@@ -1,4 +1,7 @@
 mod components;
+mod schema;
+#[cfg(feature = "ssr")]
+pub mod server;
 pub mod app;
 
 #[cfg(feature = "hydrate")]
