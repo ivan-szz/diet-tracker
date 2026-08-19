@@ -22,9 +22,10 @@ strum = "0.28.0"
 serde = "1.0.229"
 validator = { version = "0.21.0", features = ["derive"] }
 serde_json = "1.0.151"
-sqlx = { version = "0.9.0", features = ["runtime-tokio", "postgres", "macros"], optional= true }
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "postgres", "macros", "chrono"], optional= true }
 chrono = "0.4.45"
-argon2 = "0.5.3"
+argon2 = { version = "0.5.3", features = ["std"], optional = true }
+thiserror = "2.0.20"
 
 [features]
 hydrate = [
@@ -37,6 +38,7 @@ ssr = [
     "dep:tokio",
     "dep:leptos_axum",
     "dep:sqlx",
+    "dep:argon2",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",

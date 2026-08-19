@@ -13,6 +13,21 @@ pub struct UserSchema {
 
 #[derive(Deserialize, Validate)]
 pub struct RegisterUserSchema {
+    #[validate(length(min = 1))]
     pub name: String,
-    pub password: String
+
+    #[validate(length(min = 1))]
+    pub password: String,
+}
+
+#[derive(Deserialize, Validate)]
+pub struct UpdateUserTargetWeightSchema {
+    pub name: String,
+    pub target_weight_kg: f32,
+}
+
+#[derive(Deserialize, Validate)]
+pub struct UpdateUserStreakSchema {
+    pub name: String,
+    pub streak: i32,
 }

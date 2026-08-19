@@ -3,6 +3,7 @@ mod schema;
 #[cfg(feature = "ssr")]
 pub mod server;
 pub mod app;
+pub mod utils;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
