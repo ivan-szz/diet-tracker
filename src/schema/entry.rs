@@ -24,12 +24,12 @@ pub struct CreateEntrySchema {
 }
 
 #[derive(Deserialize)]
-pub struct FindEntryByUser {
+pub struct FindEntryByUserSchema {
     pub name: String,
 }
 
 #[derive(Deserialize)]
-pub struct FindEntryById {
+pub struct FindEntryByIdSchema {
     pub id: i32,
 }
 
