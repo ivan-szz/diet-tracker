@@ -55,7 +55,7 @@ impl Entry {
     pub async fn create(value: &CreateEntrySchema, pool: &PgPool) -> Result<Self, ServerError> {
         let CreateEntrySchema {
             date,
-            user_id,
+            user_name,
             name,
             calories,
             notes,
@@ -64,9 +64,9 @@ impl Entry {
         let entry = sqlx::query_as!(
             Self,
             "INSERT INTO entries (user_id, date, name, calories, notes)
-             VALUES ($1, $2, $3, $4, $5)
+             VALUES ((SELECT id FROM users WHERE name = $1), $2, $3, $4, $5)
              RETURNING *",
-            user_id,
+            user_name,
             date,
             name,
             calories,

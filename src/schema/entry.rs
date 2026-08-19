@@ -16,7 +16,7 @@ pub struct EntrySchema {
 #[derive(Deserialize, Validate)]
 pub struct CreateEntrySchema {
     pub date: NaiveDate,
-    pub user_id: i32,
+    pub user_name: String,
     pub name: String,
     #[validate(range(min = 0))]
     pub calories: i32,
