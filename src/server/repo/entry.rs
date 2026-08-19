@@ -1,7 +1,13 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::PgPool;
 
-use crate::{schema::entry::{CreateEntrySchema, DeleteEntrySchema, FindEntryById, FindEntryByUser, UpdateEntryNotesSchema}, server::error::ServerError};
+use crate::{
+    schema::entry::{
+        CreateEntrySchema, DeleteEntrySchema, FindEntryById, FindEntryByUser,
+        UpdateEntryNotesSchema,
+    },
+    server::error::ServerError,
+};
 
 pub struct Entry {
     pub id: i32,
@@ -39,13 +45,9 @@ impl Entry {
     pub async fn find_by_id(value: &FindEntryById, pool: &PgPool) -> Result<Self, ServerError> {
         let FindEntryById { id } = value;
 
-        let entry = sqlx::query_as!(
-            Self,
-            "SELECT * FROM entries WHERE id = $1",
-            id,
-        )
-        .fetch_one(pool)
-        .await?;
+        let entry = sqlx::query_as!(Self, "SELECT * FROM entries WHERE id = $1", id,)
+            .fetch_one(pool)
+            .await?;
 
         Ok(entry)
     }
@@ -100,12 +102,9 @@ impl Entry {
     pub async fn delete_entry(value: &DeleteEntrySchema, pool: &PgPool) -> Result<(), ServerError> {
         let DeleteEntrySchema { id } = value;
 
-        sqlx::query!(
-            "DELETE FROM entries WHERE id = $1",
-            id,
-        )
-        .execute(pool)
-        .await?;
+        sqlx::query!("DELETE FROM entries WHERE id = $1", id,)
+            .execute(pool)
+            .await?;
 
         Ok(())
     }
