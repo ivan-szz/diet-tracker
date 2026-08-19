@@ -1,0 +1,2 @@
+ALTER TABLE entries
+    ALTER COLUMN notes DROP NOT NULL;
