@@ -1,0 +1,2 @@
+ALTER TABLE days
+    ALTER COLUMN weight_kg SET NOT NULL;

@@ -1,0 +1,2 @@
+ALTER TABLE days
+    ALTER COLUMN notes DROP NOT NULL;
