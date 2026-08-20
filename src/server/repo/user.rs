@@ -18,6 +18,14 @@ pub struct User {
 }
 
 impl User {
+    pub async fn find_all(pool: &PgPool) -> Result<Vec<Self>, ServerError> {
+        let users = sqlx::query_as!(Self, "SELECT * FROM users")
+            .fetch_all(pool)
+            .await?;
+
+        Ok(users)
+    }
+
     pub async fn create(value: &RegisterUserSchema, pool: &PgPool) -> Result<Self, ServerError> {
         let RegisterUserSchema { name, password } = value;
 
