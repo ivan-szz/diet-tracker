@@ -1,8 +1,10 @@
+pub mod app;
 mod components;
+pub mod features;
+pub mod routes;
 mod schema;
 #[cfg(feature = "ssr")]
 pub mod server;
-pub mod app;
 pub mod utils;
 
 #[cfg(feature = "hydrate")]
