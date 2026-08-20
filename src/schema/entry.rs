@@ -24,7 +24,7 @@ pub struct CreateEntrySchema {
 }
 
 #[derive(Deserialize)]
-pub struct FindEntryByUserSchema {
+pub struct FindEntriesByUserSchema {
     pub name: String,
 }
 
