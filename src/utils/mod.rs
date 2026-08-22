@@ -1,2 +1,2 @@
-#[cfg(feature = "ssr")]
+#[cfg(feature = "server")]
 pub mod argon;

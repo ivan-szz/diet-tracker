@@ -1,35 +1,51 @@
-use leptos::logging::log;
-use leptos::prelude::{use_context, ServerFnError};
+use dioxus::fullstack::FullstackContext;
+use dioxus::logger::tracing::info;
+use dioxus::prelude::ServerFnError;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::Postgres;
+use std::sync::OnceLock;
 
-/// Crea il database se non esiste, apre il pool e applica le migration.
+static POOL: OnceLock<PgPool> = OnceLock::new();
+
+/// Creates the database if it does not exist, opens the pool and runs the migrations.
 ///
-/// Va chiamata una volta sola allo startup, prima di iniziare a servire
-/// richieste: se qualcosa va storto è meglio non partire affatto.
+/// Must be called exactly once at startup, before serving any request: if
+/// something goes wrong it is better not to start at all.
+///
+/// The result is memoized because `dx serve` rebuilds the router on every
+/// hot-patch: without `OnceLock` each rebuild would open a brand new pool.
 pub async fn init() -> Result<PgPool, sqlx::Error> {
-    let url = std::env::var("DATABASE_URL").expect(
-        "DATABASE_URL non impostata: definiscila in .env e avvia con `make dev`",
-    );
+    if let Some(pool) = POOL.get() {
+        return Ok(pool.clone());
+    }
+
+    let url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL non impostata: definiscila in .env");
 
     if !Postgres::database_exists(&url).await? {
-        log!("Creating new DB");
+        info!("Creating new DB");
         Postgres::create_database(&url).await?;
     }
 
     let pool = PgPoolOptions::new().max_connections(5).connect(&url).await?;
 
-    // `migrate!` incorpora la cartella ./migrations nel binario a compile time,
-    // quindi in produzione non serve avere i .sql sul disco.
+    // `migrate!` embeds the ./migrations folder into the binary at compile time,
+    // so the .sql files don't need to be on disk in production.
     sqlx::migrate!("./migrations").run(&pool).await?;
-    log!("Migrations applied");
+    info!("Migrations applied");
 
-    Ok(pool)
+    Ok(POOL.get_or_init(|| pool).clone())
 }
 
-/// Recupera il pool dal contesto Leptos, dentro una server function.
+/// Retrieves the pool from inside a server function.
+///
+/// Dioxus has no separate "server context": the pool travels in the HTTP
+/// request extensions (inserted in `main` via `Extension(pool)`).
+/// `FullstackContext` exposes them both when the server function is called
+/// over HTTP by the client and when it is called in-process during SSR.
 pub fn pool() -> Result<PgPool, ServerFnError> {
-    use_context::<PgPool>()
+    FullstackContext::current()
+        .and_then(|ctx| ctx.extension::<PgPool>())
         .ok_or_else(|| ServerFnError::new("Missing Postgres Pool in context"))
 }
