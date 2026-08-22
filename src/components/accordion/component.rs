@@ -4,15 +4,11 @@ use dioxus_primitives::accordion::{
     self, AccordionContentProps, AccordionItemProps, AccordionProps, AccordionTriggerProps,
 };
 
-#[css_module("/src/components/accordion/style.css")]
-struct Styles;
-
 #[component]
 pub fn Accordion(props: AccordionProps) -> Element {
     rsx! {
         accordion::Accordion {
-            class: Styles::dx_accordion,
-            width: "15rem",
+            class: "w-60 [contain:inline-size]",
             id: props.id,
             allow_multiple_open: props.allow_multiple_open,
             disabled: props.disabled,
@@ -28,7 +24,7 @@ pub fn Accordion(props: AccordionProps) -> Element {
 pub fn AccordionItem(props: AccordionItemProps) -> Element {
     rsx! {
         accordion::AccordionItem {
-            class: Styles::dx_accordion_item,
+            class: "group mt-px box-border overflow-hidden border-b border-[var(--primary-color-6)] first:mt-0 last:border-b-0",
             disabled: props.disabled,
             default_open: props.default_open,
             on_change: props.on_change,
@@ -44,12 +40,12 @@ pub fn AccordionItem(props: AccordionItemProps) -> Element {
 pub fn AccordionTrigger(props: AccordionTriggerProps) -> Element {
     rsx! {
         accordion::AccordionTrigger {
-            class: Styles::dx_accordion_trigger,
+            class: "flex w-full flex-row items-center justify-between border-0 bg-transparent py-4 text-left text-[var(--secondary-color-4)] outline-none hover:not-disabled:cursor-pointer hover:not-disabled:underline focus-visible:shadow-[inset_0_0_0_2px_var(--focused-border-color)] disabled:cursor-not-allowed disabled:text-[var(--secondary-color-5)] disabled:opacity-50",
             id: props.id,
             attributes: props.attributes,
             {props.children}
             ChevronDown {
-                class: Styles::dx_accordion_expand_icon,
+                class: "transition-transform duration-300 ease-in-out group-data-[open=true]:rotate-180",
                 size: "20px",
                 stroke: "var(--secondary-color-4)",
             }
@@ -61,7 +57,7 @@ pub fn AccordionTrigger(props: AccordionTriggerProps) -> Element {
 pub fn AccordionContent(props: AccordionContentProps) -> Element {
     rsx! {
         accordion::AccordionContent {
-            class: Styles::dx_accordion_content,
+            class: "grid data-[open=false]:animate-accordion-close data-[open=true]:animate-accordion-open [&>*]:min-h-0 [&>*]:overflow-hidden",
             style: "--collapsible-content-width: 140px",
             id: props.id,
             attributes: props.attributes,

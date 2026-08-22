@@ -1,8 +1,5 @@
 use dioxus::prelude::*;
 
-#[css_module("/src/components/card/style.css")]
-struct Styles;
-
 #[component]
 pub fn Card(
     #[props(extends=GlobalAttributes)] attributes: Vec<Attribute>,
@@ -10,7 +7,7 @@ pub fn Card(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card,
+            class: "flex flex-col gap-6 rounded-2xl border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] py-6 text-[var(--secondary-color-4)] shadow-[0_2px_10px_rgb(0_0_0/10%)]",
             "data-slot": "card",
             ..attributes,
             {children}
@@ -25,7 +22,7 @@ pub fn CardHeader(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card_header,
+            class: "grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-[[data-slot=card-action]]:grid-cols-[1fr_auto]",
             "data-slot": "card-header",
             ..attributes,
             {children}
@@ -40,7 +37,7 @@ pub fn CardTitle(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card_title,
+            class: "text-base leading-none font-semibold",
             "data-slot": "card-title",
             ..attributes,
             {children}
@@ -55,7 +52,7 @@ pub fn CardDescription(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card_description,
+            class: "text-sm leading-5 text-[var(--secondary-color-5)]",
             "data-slot": "card-description",
             ..attributes,
             {children}
@@ -70,7 +67,7 @@ pub fn CardAction(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card_action,
+            class: "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
             "data-slot": "card-action",
             ..attributes,
             {children}
@@ -85,7 +82,7 @@ pub fn CardContent(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card_content,
+            class: "px-6",
             "data-slot": "card-content",
             ..attributes,
             {children}
@@ -100,7 +97,7 @@ pub fn CardFooter(
 ) -> Element {
     rsx! {
         div {
-            class: Styles::dx_card_footer,
+            class: "flex items-center px-6",
             "data-slot": "card-footer",
             ..attributes,
             {children}

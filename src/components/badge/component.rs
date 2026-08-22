@@ -1,9 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_icons::lucide::BadgeCheck;
 
-#[css_module("/src/components/badge/style.css")]
-struct Styles;
-
 #[derive(Copy, Clone, PartialEq, Default)]
 #[non_exhaustive]
 pub enum BadgeVariant {
@@ -21,6 +18,21 @@ impl BadgeVariant {
             BadgeVariant::Secondary => "secondary",
             BadgeVariant::Destructive => "destructive",
             BadgeVariant::Outline => "outline",
+        }
+    }
+
+    fn classes(&self) -> &'static str {
+        match self {
+            BadgeVariant::Primary => {
+                "bg-[var(--secondary-color-2)] text-[var(--primary-color)]"
+            }
+            BadgeVariant::Secondary => {
+                "bg-[var(--primary-color-5)] text-[var(--secondary-color-1)]"
+            }
+            BadgeVariant::Destructive => {
+                "bg-[var(--primary-error-color)] text-[var(--contrast-error-color)]"
+            }
+            BadgeVariant::Outline => "border border-[var(--primary-color-6)] bg-[var(--primary-color)] text-[var(--secondary-color-4)]",
         }
     }
 }
@@ -55,7 +67,7 @@ pub fn Badge(props: BadgeProps) -> Element {
 fn BadgeElement(props: BadgeProps) -> Element {
     rsx! {
         span {
-            class: Styles::dx_badge,
+            class: format!("inline-flex h-5 min-w-5 items-center justify-center gap-1 rounded-[10px] px-2 text-xs shadow-[0_0_0_1px_var(--primary-color-2)] {}", props.variant.classes()),
             "data-style": props.variant.class(),
             ..props.attributes,
             {props.children}

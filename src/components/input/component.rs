@@ -1,7 +1,4 @@
 use dioxus::prelude::*;
-#[css_module("/src/components/input/style.css")]
-struct Styles;
-
 #[component]
 pub fn Input(
     oninput: Option<EventHandler<FormEvent>>,
@@ -30,7 +27,7 @@ pub fn Input(
 ) -> Element {
     rsx! {
         input {
-            class: Styles::dx_input,
+            class: "relative flex flex-row items-center justify-between gap-1 rounded-lg border-0 bg-[var(--primary-color)] px-3 py-2 text-[var(--secondary-color-4)] shadow-[inset_0_0_0_1px_var(--primary-color-6)] transition-colors duration-100 placeholder:text-[var(--secondary-color-5)] hover:not-disabled:bg-[var(--primary-color-4)] hover:not-disabled:text-[var(--secondary-color-1)] focus-visible:bg-[var(--primary-color-4)] focus-visible:text-[var(--secondary-color-1)] focus-visible:outline-none disabled:cursor-not-allowed disabled:text-[var(--secondary-color-5)]",
             oninput: move |e| _ = oninput.map(|callback| callback(e)),
             onchange: move |e| _ = onchange.map(|callback| callback(e)),
             oninvalid: move |e| _ = oninvalid.map(|callback| callback(e)),
