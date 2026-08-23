@@ -4,7 +4,7 @@ use dioxus_primitives::label::{self, LabelProps};
 pub fn Label(props: LabelProps) -> Element {
     rsx! {
         label::Label {
-            class: "flex items-center text-[0.8rem] leading-none text-[var(--secondary-color-4)]",
+            class: "flex items-center text-xs leading-none",
             html_for: props.html_for,
             attributes: props.attributes,
             {props.children}

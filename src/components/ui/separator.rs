@@ -5,7 +5,7 @@ use dioxus_primitives::{dioxus_attributes::attributes, merge_attributes};
 #[component]
 pub fn Separator(props: SeparatorProps) -> Element {
     let base = attributes!(div {
-        class: "bg-[var(--primary-color-6)] data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
+        class: "bg-primary data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
     });
     let merged = merge_attributes(vec![base, props.attributes]);
 
