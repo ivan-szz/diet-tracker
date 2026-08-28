@@ -3,21 +3,19 @@ use dioxus::prelude::*;
 use crate::{Route, components::ui::{button::Button, input::Input, label::Label, separator::Separator}};
 
 #[component]
-pub fn Login() -> Element {
+pub fn Register() -> Element {
     rsx! {
         div {
             class: "max-w-md w-full",
             p {
                 class: "text-accent text-xs font-semibold mb-2",
-                "BENTORNATO"
+                "BENVENUTO"
             }
             h1 {
-                class: "font-heading text-3xl mb-3",
-                "Accedi al tuo diario"
-            }
-            p {
-                class: "mb-8",
-                "Continua a monitorare la tua dieta e quella del tuo gruppo."
+                class: "font-heading text-3xl mb-6",
+                "Registrati e inizia"
+                br {  }
+                "il tuo diario"
             }
             form {
                 class: "flex flex-col gap-5",
@@ -48,7 +46,7 @@ pub fn Login() -> Element {
                 }
                 Button {
                     class: "font-heading",
-                    "Accedi"
+                    "Registrati"
                 }
             }
             div {
@@ -63,11 +61,11 @@ pub fn Login() -> Element {
             }
             p {
                 class: "text-center",
-                "Non hai un account? "
+                "Hai già un account? "
                 Link {
                     class: "text-accent hover:underline",
-                    to: Route::Register {},
-                    "Registrati"
+                    to: Route::Login {},
+                    "Accedi"
                 }
             }
         }
