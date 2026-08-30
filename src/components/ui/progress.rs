@@ -5,7 +5,7 @@ use dioxus_primitives::progress::{self, ProgressProps};
 pub fn Progress(props: ProgressProps) -> Element {
     rsx! {
         progress::Progress {
-            class: "group relative h-3 min-w-50 overflow-hidden rounded-full bg-white/30",
+            class: "group relative h-6 min-w-50 overflow-hidden rounded-full bg-white/30",
             value: props.value,
             max: props.max,
             attributes: props.attributes,

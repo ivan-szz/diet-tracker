@@ -160,9 +160,20 @@ pub fn Home() -> Element {
                         "{target_kg} kg"
                     }
                 }
-                Progress {
-                    value: percent,
-                    max: 100
+                div {
+                    class: "relative w-full flex items-center",
+                    p {
+                        class: "absolute text-background font-heading z-10 -translate-x-full pr-3",
+                        left: "{percent:.1}%",
+                        "{percent:.1} %"
+                    }
+                    div {
+                        class: "w-full",
+                        Progress {
+                            value: percent,
+                            max: 100
+                        }
+                    }
                 }
                 div {
                     class: "flex items-center justify-between mb-3",
