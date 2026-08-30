@@ -7,7 +7,7 @@ pub fn Card(
 ) -> Element {
     rsx! {
         div {
-            class: "flex flex-col gap-6 rounded-2xl border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] py-6 text-[var(--secondary-color-4)] shadow-[0_2px_10px_rgb(0_0_0/10%)]",
+            class: "flex flex-col gap-2 rounded-4xl bg-background-dark p-7 font-sans text-base font-normal shadow-sm",
             "data-slot": "card",
             ..attributes,
             {children}
@@ -22,7 +22,7 @@ pub fn CardHeader(
 ) -> Element {
     rsx! {
         div {
-            class: "grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-[[data-slot=card-action]]:grid-cols-[1fr_auto]",
+            class: "grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 has-[[data-slot=card-action]]:grid-cols-[1fr_auto]",
             "data-slot": "card-header",
             ..attributes,
             {children}
@@ -82,7 +82,6 @@ pub fn CardContent(
 ) -> Element {
     rsx! {
         div {
-            class: "px-6",
             "data-slot": "card-content",
             ..attributes,
             {children}
@@ -97,7 +96,7 @@ pub fn CardFooter(
 ) -> Element {
     rsx! {
         div {
-            class: "flex items-center px-6",
+            class: "flex items-center",
             "data-slot": "card-footer",
             ..attributes,
             {children}

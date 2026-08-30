@@ -40,14 +40,14 @@ pub fn AccordionItem(props: AccordionItemProps) -> Element {
 pub fn AccordionTrigger(props: AccordionTriggerProps) -> Element {
     rsx! {
         accordion::AccordionTrigger {
-            class: "flex w-full flex-row items-center justify-between border-0 bg-transparent py-4 text-left text-[var(--secondary-color-4)] outline-none hover:not-disabled:cursor-pointer hover:not-disabled:underline focus-visible:shadow-[inset_0_0_0_2px_var(--focused-border-color)] disabled:cursor-not-allowed disabled:text-[var(--secondary-color-5)] disabled:opacity-50",
+            class: "flex w-full flex-row items-center justify-between border-0 bg-transparent py-4 text-left text-[var(--secondary-color-4)] outline-none hover:not-disabled:cursor-pointer focus-visible:shadow-[inset_0_0_0_2px_var(--focused-border-color)] disabled:cursor-not-allowed disabled:text-[var(--secondary-color-5)] disabled:opacity-50",
             id: props.id,
             attributes: props.attributes,
             {props.children}
             ChevronDown {
                 class: "transition-transform duration-300 ease-in-out group-data-[open=true]:rotate-180",
                 size: "20px",
-                stroke: "var(--secondary-color-4)",
+                stroke: "var(--color-primary)",
             }
         }
     }
@@ -57,8 +57,7 @@ pub fn AccordionTrigger(props: AccordionTriggerProps) -> Element {
 pub fn AccordionContent(props: AccordionContentProps) -> Element {
     rsx! {
         accordion::AccordionContent {
-            class: "grid data-[open=false]:animate-accordion-close data-[open=true]:animate-accordion-open [&>*]:min-h-0 [&>*]:overflow-hidden",
-            style: "--collapsible-content-width: 140px",
+            class: "h-0 overflow-hidden opacity-0 [interpolate-size:allow-keywords] transition-[height,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] data-[open=true]:h-auto data-[open=true]:animate-accordion-open data-[open=true]:opacity-100 motion-reduce:animate-none motion-reduce:transition-none",
             id: props.id,
             attributes: props.attributes,
             {props.children}

@@ -2,7 +2,7 @@
 // need dioxus
 use dioxus::prelude::*;
 
-use views::{Home, Login, Navbar, Register, AuthLayout};
+use views::{Home, Login, Register, AuthLayout};
 
 /// Define a components module that contains all shared components for our app.
 mod components;
@@ -23,12 +23,10 @@ mod views;
 enum Route {
     // The layout attribute defines a wrapper for all routes under the layout. Layouts are great for wrapping
     // many routes with a common UI like a navbar.
-    #[layout(Navbar)]
-        // The route attribute defines the URL pattern that a specific route matches. If that pattern matches the URL,
-        // the component for that route will be rendered. The component name that is rendered defaults to the variant name.
-        #[route("/")]
-        Home {},
-    #[end_layout]
+    // The route attribute defines the URL pattern that a specific route matches. If that pattern matches the URL,
+    // the component for that route will be rendered. The component name that is rendered defaults to the variant name.
+    #[route("/")]
+    Home {},
     #[layout(AuthLayout)]
         #[route("/login")]
         Login,

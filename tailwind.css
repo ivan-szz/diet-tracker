@@ -1,27 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --animate-accordion-close: accordion-close 300ms cubic-bezier(0.87, 0, 0.13, 1) forwards;
-  --animate-accordion-open: accordion-open 300ms cubic-bezier(0.87, 0, 0.13, 1) forwards;
+  --animate-accordion-open: accordion-open 300ms cubic-bezier(0.22, 1, 0.36, 1);
   --animate-alert-in: alert-in 150ms ease-out forwards;
   --animate-alert-out: alert-out 150ms ease-in forwards;
   --animate-progress-indeterminate: progress-indeterminate 1s linear infinite;
   --font-heading: "Caprasimo", serif;
   --font-sans: "Figtree", sans-serif;
   --color-background: #F5EAD8;
+  --color-background-dark: #EBDDC5;
   --color-primary: #201E1D;
+  --color-primary-light: #6B665E;
   --color-secondary: #56633F;
   --color-secondary-light: #65734D;
   --color-accent: #C67139;
 
-  @keyframes accordion-close {
-    from { height: var(--collapsible-content-width); }
-    to { grid-template-rows: 0fr; }
-  }
-
   @keyframes accordion-open {
-    from { height: 0; }
-    to { grid-template-rows: 1fr; }
+    from {
+      height: 0;
+      opacity: 0;
+    }
+    to {
+      height: auto;
+      opacity: 1;
+    }
   }
 
   @keyframes alert-in {
