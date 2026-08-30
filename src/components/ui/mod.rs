@@ -3,6 +3,7 @@ pub mod alert_dialog;
 pub mod badge;
 pub mod button;
 pub mod card;
+pub mod chart;
 pub mod checkbox;
 pub mod input;
 pub mod label;

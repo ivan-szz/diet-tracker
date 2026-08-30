@@ -1,8 +1,39 @@
-use chrono::{Datelike, Local};
+use chrono::{Datelike, Days, Local};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{ArrowRight};
+use dioxus_icons::lucide::ArrowRight;
 
-use crate::{components::{UserRow, ui::{accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger}, card::Card, progress::Progress, separator::Separator}}, schema::user::UserSchema};
+use crate::components::{
+    ui::{
+        accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger},
+        card::Card,
+        chart::{Chart, ChartSeries},
+        progress::Progress,
+        separator::Separator,
+    },
+    UserRow,
+};
+
+const SHORT_MONTHS: [&str; 12] = [
+    "gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic",
+];
+
+const HISTORY_DAYS: u64 = 30;
+
+// TODO: Questi tre andamenti sono segnaposto, arriveranno dal repo dei giorni dell'utente selezionato.
+const CALORIES: [f64; 30] = [
+    1450.0, 1720.0, 1980.0, 1610.0, 1290.0, 2050.0, 1870.0, 1540.0, 1660.0, 1930.0, 1380.0, 1750.0,
+    1610.0, 2110.0, 1480.0, 1690.0, 1820.0, 1350.0, 1570.0, 4000.0, 1710.0, 1440.0, 1880.0, 1620.0,
+    1300.0, 1990.0, 1750.0, 1530.0, 1680.0, 1420.0,
+];
+const TARGET_CALORIES: [f64; 30] = [
+    2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0,
+    1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0,
+    1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0,
+];
+const WEIGHT: [f64; 30] = [
+    95.5, 95.4, 95.6, 95.2, 95.0, 95.1, 94.8, 94.6, 94.7, 94.4, 94.2, 94.3, 94.0, 93.8, 93.9, 93.7,
+    93.5, 93.6, 93.4, 93.3, 93.5, 93.2, 93.0, 93.1, 92.9, 92.8, 93.0, 92.8, 92.6, 92.7,
+];
 
 const MONTHS: [&str; 12] = [
     "GENNAIO",
@@ -25,10 +56,20 @@ pub fn Home() -> Element {
     let month = MONTHS[now.month0() as usize];
     let year = now.year();
 
+    // La riga in basso del grafico: gli ultimi giorni, dal più vecchio a oggi.
+    let days: Vec<String> = (0..HISTORY_DAYS)
+        .rev()
+        .map(|back| {
+            let day = now.date_naive() - Days::new(back);
+            format!("{} {}", day.day(), SHORT_MONTHS[day.month0() as usize])
+        })
+        .collect();
+
     let target_kg: f32 = 65.0;
     let current_kg: f32 = 92.7;
     let starting_kg: f32 = 95.5;
-    let percent = 100.0 - (100.0/((starting_kg - target_kg).abs()/(current_kg - target_kg).abs())) as f64;
+    let percent =
+        100.0 - (100.0 / ((starting_kg - target_kg).abs() / (current_kg - target_kg).abs())) as f64;
 
     rsx! {
         div {
@@ -189,6 +230,32 @@ pub fn Home() -> Element {
                 p {
                     class: "text-sm text-primary-light",
                     "Mancano {(current_kg - target_kg).abs():.1} kg all'obiettivo"
+                }
+            }
+            Card {
+                p {
+                    class: "text-accent text-xs font-semibold",
+                    // TODO: Seguirà l'utente selezionato, una volta che esisterà.
+                    "IL TUO ANDAMENTO"
+                }
+                p {
+                    class: "font-heading text-xl",
+                    "Ultimi 30 giorni"
+                }
+                p {
+                    class: "text-sm text-primary-light mb-6",
+                    "Passa il cursore sul grafico per confrontare calorie e peso di un singolo giorno."
+                }
+                Chart {
+                    days: days,
+                    series: vec![
+                        ChartSeries::new("Calorie assunte", " kcal", CALORIES.to_vec()),
+                        ChartSeries::new("Obiettivo calorie", " kcal", TARGET_CALORIES.to_vec())
+                            .with_color("#6B665E")
+                            .dashed(),
+                        // Il peso resta a un decimale anche in una settimana di valori tondi.
+                        ChartSeries::new("Peso", " kg", WEIGHT.to_vec()).with_decimals(1),
+                    ],
                 }
             }
         }
