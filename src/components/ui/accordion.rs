@@ -40,7 +40,7 @@ pub fn AccordionItem(props: AccordionItemProps) -> Element {
 pub fn AccordionTrigger(props: AccordionTriggerProps) -> Element {
     rsx! {
         accordion::AccordionTrigger {
-            class: "flex w-full flex-row items-center justify-between border-0 bg-transparent py-4 text-left text-[var(--secondary-color-4)] outline-none hover:not-disabled:cursor-pointer focus-visible:shadow-[inset_0_0_0_2px_var(--focused-border-color)] disabled:cursor-not-allowed disabled:text-[var(--secondary-color-5)] disabled:opacity-50",
+            class: "flex w-full flex-row items-center justify-between border-0 bg-transparent text-left text-[var(--secondary-color-4)] outline-none hover:not-disabled:cursor-pointer focus-visible:shadow-[inset_0_0_0_2px_var(--focused-border-color)] disabled:cursor-not-allowed disabled:text-[var(--secondary-color-5)] disabled:opacity-50",
             id: props.id,
             attributes: props.attributes,
             {props.children}

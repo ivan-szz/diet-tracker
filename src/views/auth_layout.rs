@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{Route, components::ui::{button::Button, input::Input, label::Label, separator::Separator}};
+use crate::Route;
 
 #[component]
 pub fn AuthLayout() -> Element {

@@ -13,6 +13,7 @@
   --color-primary-light: #6B665E;
   --color-secondary: #56633F;
   --color-secondary-light: #65734D;
+  --color-secondary-lighter: #F0FAE0;
   --color-accent: #C67139;
 
   @keyframes accordion-open {

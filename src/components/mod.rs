@@ -5,4 +5,10 @@
 mod user_row;
 pub use user_row::UserRow;
 
+mod entry_row;
+pub use entry_row::EntryRow;
+
+mod day_block;
+pub use day_block::DayBlock;
+
 pub mod ui;

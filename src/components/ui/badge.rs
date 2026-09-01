@@ -24,7 +24,7 @@ impl BadgeVariant {
     fn classes(&self) -> &'static str {
         match self {
             BadgeVariant::Primary => {
-                "bg-[var(--secondary-color-2)] text-[var(--primary-color)]"
+                "bg-secondary-lighter text-secondary"
             }
             BadgeVariant::Secondary => {
                 "bg-[var(--primary-color-5)] text-[var(--secondary-color-1)]"
@@ -67,7 +67,7 @@ pub fn Badge(props: BadgeProps) -> Element {
 fn BadgeElement(props: BadgeProps) -> Element {
     rsx! {
         span {
-            class: format!("inline-flex h-5 min-w-5 items-center justify-center gap-1 rounded-[10px] px-2 text-xs shadow-[0_0_0_1px_var(--primary-color-2)] {}", props.variant.classes()),
+            class: format!("inline-flex min-w-5 items-center justify-center gap-1 rounded-full px-2 text-sm {}", props.variant.classes()),
             "data-style": props.variant.class(),
             ..props.attributes,
             {props.children}

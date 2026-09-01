@@ -1,21 +1,21 @@
 use chrono::{Datelike, Days, Local};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::ArrowRight;
+use dioxus_icons::lucide::{ArrowRight, Plus};
 
-use crate::components::{
-    ui::{
-        accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger},
-        card::Card,
-        chart::{Chart, ChartSeries},
-        progress::Progress,
-        separator::Separator,
+use crate::{
+    components::{
+        ui::{
+            accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger},
+            button::Button,
+            card::Card,
+            chart::{Chart, ChartSeries},
+            progress::Progress,
+            separator::Separator,
+        },
+        DayBlock, EntryRow, UserRow,
     },
-    UserRow,
+    utils::constants::{MONTHS, SHORT_MONTHS},
 };
-
-const SHORT_MONTHS: [&str; 12] = [
-    "gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic",
-];
 
 const HISTORY_DAYS: u64 = 30;
 
@@ -33,21 +33,6 @@ const TARGET_CALORIES: [f64; 30] = [
 const WEIGHT: [f64; 30] = [
     95.5, 95.4, 95.6, 95.2, 95.0, 95.1, 94.8, 94.6, 94.7, 94.4, 94.2, 94.3, 94.0, 93.8, 93.9, 93.7,
     93.5, 93.6, 93.4, 93.3, 93.5, 93.2, 93.0, 93.1, 92.9, 92.8, 93.0, 92.8, 92.6, 92.7,
-];
-
-const MONTHS: [&str; 12] = [
-    "GENNAIO",
-    "FEBBRAIO",
-    "MARZO",
-    "APRILE",
-    "MAGGIO",
-    "GIUGNO",
-    "LUGLIO",
-    "AGOSTO",
-    "SETTEMBRE",
-    "OTTOMBRE",
-    "NOVEMBRE",
-    "DICEMBRE",
 ];
 
 #[component]
@@ -73,7 +58,7 @@ pub fn Home() -> Element {
 
     rsx! {
         div {
-            class: "p-8 pt-20 flex flex-col gap-7",
+            class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto",
             div {
                 p {
                     class: "text-accent text-xs font-semibold mb-2",
@@ -149,6 +134,7 @@ pub fn Home() -> Element {
                         index: 0,
                         AccordionTrigger {
                             div {
+                                class: "pb-4",
                                 p {
                                     class: "text-accent text-xs font-semibold",
                                     "COMMUNITY"
@@ -189,7 +175,7 @@ pub fn Home() -> Element {
             }
             Card {
                 p {
-                    class: "text-accent text-xs font-semibold mt-4",
+                    class: "text-accent text-xs font-semibold",
                     "OBIETTIVO PESO"
                 }
                 p {
@@ -256,6 +242,57 @@ pub fn Home() -> Element {
                         // Il peso resta a un decimale anche in una settimana di valori tondi.
                         ChartSeries::new("Peso", " kg", WEIGHT.to_vec()).with_decimals(1),
                     ],
+                }
+            }
+            div {
+                class: "flex justify-between items-center mt-10",
+                h2 {
+                    class: "font-heading text-3xl",
+                    "Diario alimentare"
+                }
+                Button {
+                    class: "font-heading text-xl",
+                    Plus {
+                        size: "2em"
+                    }
+                    "Nuova voce"
+                }
+            }
+            Card {
+                // TODO: Iterare su una mappa giorni -> entry
+                div {
+                    class: "space-y-4",
+                    DayBlock {
+                        date: now.date_naive(),
+                        ingested_calories: 1463,
+                        target_calories: 1800,
+                        EntryRow {
+                            name: "Saikebon Manzo (Yakisoba)",
+                            calories: 413,
+                        }
+                        EntryRow {
+                            name: "Pizza",
+                            calories: 1050,
+                            notes: "Pranzo ufficio"
+                        }
+                    }
+                    Separator {
+                        // TODO: Renderizzare prima di tutti i day block tranne il primo
+                        class: "opacity-20"
+                    }
+                    DayBlock {
+                        date: now.date_naive() - Days::new(1),
+                        ingested_calories: 1490,
+                        target_calories: 1800,
+                        EntryRow {
+                            name: "Qualcos'altro",
+                            calories: 840,
+                        }
+                        EntryRow {
+                            name: "Un'altra cosa ancora",
+                            calories: 650,
+                        }
+                    }
                 }
             }
         }
