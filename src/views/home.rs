@@ -1,7 +1,7 @@
-use chrono::{Datelike, Days, Local};
-use dioxus::prelude::*;
-use dioxus_icons::lucide::{ArrowRight, Plus};
-
+use crate::components::ui::button::ButtonVariant;
+use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
+use crate::components::ui::input::Input;
+use crate::components::ui::label::Label;
 use crate::{
     components::{
         ui::{
@@ -16,6 +16,9 @@ use crate::{
     },
     utils::constants::{MONTHS, SHORT_MONTHS},
 };
+use chrono::{Datelike, Days, Local};
+use dioxus::prelude::*;
+use dioxus_icons::lucide::{ArrowRight, Plus};
 
 const HISTORY_DAYS: u64 = 30;
 
@@ -56,6 +59,8 @@ pub fn Home() -> Element {
     let percent =
         100.0 - (100.0 / ((starting_kg - target_kg).abs() / (current_kg - target_kg).abs())) as f64;
 
+    let mut is_target_calories_dialog_open = use_signal(|| false);
+
     rsx! {
         div {
             class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto",
@@ -95,14 +100,54 @@ pub fn Home() -> Element {
                             }
                         }
                         div {
+                            class: "cursor-pointer",
+                            role: "button",
+                            onclick: move |_| is_target_calories_dialog_open.set(true),
                             p {
                                 class: "font-heading text-2xl mb-1",
                                 "700 / 1800"
                             }
-                            // TODO: Add modal
                             p {
                                 class: "text-xs text-primary-light",
                                 "kcal oggi / obiettivo"
+                            }
+                        }
+                        Dialog {
+                            open: is_target_calories_dialog_open(),
+                            on_open_change: move |v| is_target_calories_dialog_open.set(v),
+                            DialogTitle {
+                                "Aggiorna l'obiettivo calorico"
+                            }
+                            DialogDescription {
+                                form {
+                                    onsubmit: move |e| e.prevent_default(),
+                                    div {
+                                        class: "space-y-2 mb-6",
+                                        Label {
+                                            html_for: "target_calories",
+                                            "Nuovo obiettivo (kcal/giorno)"
+                                        }
+                                        Input {
+                                            id: "target_calories",
+                                            name: "target_calories",
+                                            value: 1800
+                                        }
+                                    }
+                                    div {
+                                        class: "flex justify-end items-center gap-4",
+                                        Button {
+                                            type: "button",
+                                            onclick: move |_| is_target_calories_dialog_open.set(false),
+                                            variant: ButtonVariant::Outline,
+                                            "Annulla"
+                                        }
+                                        Button {
+                                            type: "submit",
+                                            variant: ButtonVariant::Primary,
+                                            "Salva"
+                                        }
+                                    }
+                                }
                             }
                         }
                         div {

@@ -33,7 +33,7 @@ impl ButtonVariant {
             ButtonVariant::Primary => "bg-accent text-background hover:not-disabled:bg-accent/90",
             ButtonVariant::Secondary => "bg-secondary text-background hover:not-disabled:bg-secondary-light",
             ButtonVariant::Destructive => "bg-red-700 text-white hover:not-disabled:bg-red-800 focus-visible:ring-red-700/40",
-            ButtonVariant::Outline => "border border-accent/20 bg-transparent text-primary hover:not-disabled:bg-accent/10",
+            ButtonVariant::Outline => "bg-transparent text-primary border border-1 border-primary rounded-full hover:not-disabled:bg-background",
             ButtonVariant::Ghost => "bg-transparent text-primary hover:not-disabled:bg-accent/10",
             ButtonVariant::Link => "bg-transparent text-accent underline-offset-4 hover:not-disabled:underline",
         }

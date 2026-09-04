@@ -8,7 +8,7 @@ use dioxus_primitives::alert_dialog::{
 pub fn AlertDialog(props: AlertDialogRootProps) -> Element {
     rsx! {
         alert_dialog::AlertDialogRoot {
-            class: "fixed inset-0 z-1000 bg-black/30 opacity-0 will-change-[opacity] data-[state=closed]:animate-alert-out data-[state=open]:animate-alert-in",
+            class: "fixed inset-0 z-1000 bg-primary/30 opacity-0 will-change-[opacity] data-[state=closed]:animate-alert-out data-[state=open]:animate-alert-in",
             id: props.id,
             default_open: props.default_open,
             open: props.open,
@@ -26,7 +26,7 @@ pub fn AlertDialog(props: AlertDialogRootProps) -> Element {
 pub fn AlertDialogTitle(props: AlertDialogTitleProps) -> Element {
     rsx! {
         alert_dialog::AlertDialogTitle {
-            class: "m-0 text-xl font-bold text-[var(--secondary-color-4)]",
+            class: "m-0 font-heading text-xl text-primary",
             attributes: props.attributes,
             {props.children}
         }
@@ -37,7 +37,7 @@ pub fn AlertDialogTitle(props: AlertDialogTitleProps) -> Element {
 pub fn AlertDialogDescription(props: AlertDialogDescriptionProps) -> Element {
     rsx! {
         alert_dialog::AlertDialogDescription {
-            class: "m-0 text-base text-[var(--secondary-color-5)]",
+            class: "m-0 text-sm text-primary-light",
             attributes: props.attributes,
             {props.children}
         }
@@ -60,7 +60,7 @@ pub fn AlertDialogCancel(props: AlertDialogCancelProps) -> Element {
     rsx! {
         alert_dialog::AlertDialogCancel {
             on_click: props.on_click,
-            class: "cursor-pointer rounded-lg border border-[var(--primary-color-6)] bg-[var(--primary-color)] px-[18px] py-2 text-base text-[var(--secondary-color-4)] transition-colors duration-200 hover:bg-[var(--primary-color-4)] focus-visible:shadow-[0_0_0_2px_var(--focused-border-color)]",
+            class: "cursor-pointer rounded-full border border-accent/20 bg-background px-[18px] py-2 font-heading text-base text-primary transition-colors duration-100 hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
             attributes: props.attributes,
             {props.children}
         }
@@ -71,7 +71,7 @@ pub fn AlertDialogCancel(props: AlertDialogCancelProps) -> Element {
 pub fn AlertDialogAction(props: AlertDialogActionProps) -> Element {
     rsx! {
         alert_dialog::AlertDialogAction {
-            class: "cursor-pointer rounded-lg border border-[var(--primary-error-color)] bg-[var(--primary-error-color)] px-[18px] py-2 text-base text-[var(--contrast-error-color)] transition-colors duration-200 hover:bg-[var(--secondary-error-color)] focus-visible:shadow-[0_0_0_2px_var(--focused-border-color)]",
+            class: "cursor-pointer rounded-full border-0 bg-accent px-[18px] py-2 font-heading text-base text-background transition-colors duration-100 hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
             on_click: props.on_click,
             attributes: props.attributes,
             {props.children}
