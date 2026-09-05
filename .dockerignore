@@ -1,0 +1,10 @@
+/target
+/.git
+/.idea
+.env
+.env.local
+.DS_Store
+**/*.rs.bk
+Dockerfile
+.dockerignore
+docker-compose.yml
