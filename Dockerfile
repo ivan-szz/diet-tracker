@@ -3,7 +3,10 @@
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-FROM rust:1-bookworm AS builder
+# trixie e non bookworm: i binari precompilati di `dx` richiedono glibc 2.38+,
+# bookworm si ferma alla 2.36. Porta anche il PostgreSQL 17 di sistema, lo
+# stesso major del `postgres:17-alpine` usato a runtime.
+FROM rust:1-trixie AS builder
 
 # Postgres serve solo a compile-time: le macro `sqlx::query_as!` validano le
 # query contro un database reale. Ne avviamo uno effimero dentro l'immagine di
@@ -32,7 +35,8 @@ ENV DATABASE_URL=postgres://root:root@localhost:5432/diet_tracker
 # Le migration vengono applicate al Postgres effimero con psql (in ordine
 # lessicografico, che coincide con l'ordine dei timestamp). Il bundle finisce
 # nella cache mount, quindi va copiato in /out dentro lo stesso RUN per
-# sopravvivere allo stage successivo.
+# sopravvivere allo stage successivo; dx nomina il binario come il crate, lo
+# rinominiamo in `server` così l'ENTRYPOINT non dipende dal nome del package.
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target,sharing=locked \
     set -eux; \
@@ -45,12 +49,13 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     dx bundle --web --release; \
     service postgresql stop; \
     mkdir -p /out; \
-    cp -r target/dx/diet-tracker-dioxus/release/web/. /out/
+    cp -r target/dx/diet-tracker-dioxus/release/web/. /out/; \
+    mv /out/diet-tracker-dioxus /out/server
 
 # ---------------------------------------------------------------------------
 # Runtime
 # ---------------------------------------------------------------------------
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
