@@ -17,5 +17,34 @@ services:
       timeout: 5s
       retries: 5
 
+  web:
+    build:
+      context: .
+    image: diet-tracker-web
+    container_name: diet-tracker-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Da qui arrivano HASH_SECRET e JWT_SECRET. A differenza di `${...}`, che
+    # compose interpola solo da `.env` o da `--env-file`, `env_file` accetta
+    # più file: l'ultimo vince, quindi `.env.local` sovrascrive `.env`.
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    environment:
+      # `environment` ha la precedenza su `env_file`: dentro la rete di compose
+      # il database è `db:5432`, mentre il DATABASE_URL dei file .env punta a
+      # 127.0.0.1 e vale solo per `dx serve`.
+      DATABASE_URL: postgres://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-root}@db:5432/${POSTGRES_DB:-diet_tracker}
+      # Il server Dioxus legge IP e PORT: senza 0.0.0.0 ascolterebbe solo
+      # sul loopback del container e la porta pubblicata non risponderebbe.
+      IP: 0.0.0.0
+      PORT: 8080
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+
 volumes:
   diet-tracker-db-data:
