@@ -1,58 +1,21 @@
-# Development
+# diet-tracker
 
-Your new jumpstart project includes basic organization with an organized `assets` folder and a `components` folder.
-If you chose to develop with the router feature, you will also have a `views` folder.
+Applicazione fullstack per il monitoraggio della dieta: giornate, pasti, peso e
+note, con autenticazione.
 
-```
-project/
-├─ assets/ # Any assets that are used by the app should be placed here
-├─ src/
-│  ├─ main.rs # The entrypoint for the app. It also defines the routes for the app.
-│  ├─ components/
-│  │  ├─ mod.rs # Defines the components module
-│  │  ├─ hero.rs # The Hero component for use in the home page
-│  │  ├─ echo.rs # The echo component uses server functions to communicate with the server
-│  ├─ views/ # The views each route will render in the app.
-│  │  ├─ mod.rs # Defines the module for the views route and re-exports the components for each route
-│  │  ├─ blog.rs # The component that will render at the /blog/:id route
-│  │  ├─ home.rs # The component that will render at the / route
-├─ Cargo.toml # The Cargo.toml file defines the dependencies and feature flags for your project
-```
+Costruita con [Dioxus 0.7](https://dioxuslabs.com/learn/0.7) (target web) e Postgres.
 
-### Automatic Tailwind (Dioxus 0.7+)
+## Avvio
 
-As of Dioxus 0.7, there no longer is a need to manually install tailwind. Simply `dx serve` and you're good to go!
-
-Automatic tailwind is supported by checking for a file called `tailwind.css` in your app's manifest directory (next to Cargo.toml). To customize the file, use the dioxus.toml:
-
-```toml
-[application]
-tailwind_input = "my.css"
-tailwind_output = "assets/out.css"
-```
-
-### Tailwind Manual Install
-
-To use tailwind plugins or manually customize tailwind, you can can install the Tailwind CLI and use it directly.
-
-1. Install npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-2. Install the Tailwind CSS CLI: https://tailwindcss.com/docs/installation/tailwind-cli
-3. Run the following command in the root of the project to start the Tailwind CSS compiler:
+Prerequisiti: [Dioxus CLI](https://dioxuslabs.com/learn/0.7/getting_started) (`dx`)
+e Docker.
 
 ```bash
-npx @tailwindcss/cli -i ./input.css -o ./assets/tailwind.css --watch
+cp .env.example .env      # imposta HASH_SECRET e JWT_SECRET
+docker compose up -d      # Postgres su 127.0.0.1:5432
+dx serve
 ```
 
-### Serving Your App
-
-Run the following command in the root of your project to start developing with the default platform:
-
-```bash
-dx serve --platform web
-```
-
-To run for a different platform, use the `--platform platform` flag. E.g.
-```bash
-dx serve --platform desktop
-```
-
+Il server crea il database se manca e applica le migration in `./migrations`
+all'avvio. Per fermare il database: `docker compose down` (`-v` per cancellare
+anche i dati).
