@@ -13,3 +13,4 @@ pub use day_block::DayBlock;
 
 pub mod providers;
 pub mod ui;
+pub mod monthly_chart;

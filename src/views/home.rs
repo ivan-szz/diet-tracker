@@ -4,7 +4,6 @@ use crate::components::ui::button::ButtonVariant;
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::ui::input::Input;
 use crate::components::ui::label::Label;
-use crate::utils::error::error_message;
 use crate::{
     components::{
         ui::{
@@ -24,8 +23,7 @@ use dioxus::prelude::*;
 use dioxus_icons::lucide::{ArrowRight, LogOut, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
-
-const HISTORY_DAYS: u64 = 30;
+use crate::components::monthly_chart::MonthlyChart;
 
 // TODO: Questi tre andamenti sono segnaposto, arriveranno dal repo dei giorni dell'utente selezionato.
 const CALORIES: [f64; 30] = [
@@ -65,19 +63,6 @@ pub fn Home() -> Element {
     let now = Local::now();
     let month = Month::from_zero_based(now.month0());
     let year = now.year();
-
-    // La riga in basso del grafico: gli ultimi giorni, dal più vecchio a oggi.
-    let days: Vec<String> = (0..HISTORY_DAYS)
-        .rev()
-        .map(|back| {
-            let day = now.date_naive() - Days::new(back);
-            format!(
-                "{} {}",
-                day.day(),
-                Month::from_zero_based(day.month0()).short_name()
-            )
-        })
-        .collect();
 
     let target_kg: f32 = 65.0;
     let current_kg: f32 = 92.7;
@@ -327,14 +312,12 @@ pub fn Home() -> Element {
                     class: "text-sm text-primary-light mb-6",
                     "Passa il cursore sul grafico per confrontare calorie e peso di un singolo giorno."
                 }
-                Chart {
-                    days: days,
+                MonthlyChart {
                     series: vec![
                         ChartSeries::new("Calorie assunte", " kcal", CALORIES.to_vec()),
                         ChartSeries::new("Obiettivo calorie", " kcal", TARGET_CALORIES.to_vec())
                             .with_color("#6B665E")
                             .dashed(),
-                        // Il peso resta a un decimale anche in una settimana di valori tondi.
                         ChartSeries::new("Peso", " kg", WEIGHT.to_vec()).with_decimals(1),
                     ],
                 }
