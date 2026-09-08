@@ -12,9 +12,9 @@ pub fn AuthLayout() -> Element {
 
     if session.user.as_ref().is_some() {
         toast_api.info(
-            "Logged in".to_string(),
+            "Connesso".to_string(),
             ToastOptions::new()
-                .description("You are already logged in")
+                .description("Sei già connesso")
                 .duration(Duration::from_secs(20)),
         );
         navigator.push("/");

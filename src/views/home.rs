@@ -20,9 +20,10 @@ use crate::{
 };
 use chrono::{Datelike, Days, Local};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{ArrowRight, Plus};
+use dioxus_icons::lucide::{ArrowRight, LogOut, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
+use crate::api::auth::logout;
 
 const HISTORY_DAYS: u64 = 30;
 
@@ -48,6 +49,18 @@ pub fn Home() -> Element {
     let user = session.user.read();
     let toast_api = use_toast();
     let navigator = use_navigator();
+
+    let handle_logout = move || async move {
+        let _ = logout().await;
+        session.clear();
+        toast_api.info(
+            "Disconnesso".to_string(),
+            ToastOptions::new()
+                .description("Ti sei disconnesso")
+                .duration(Duration::from_secs(20)),
+        );
+        navigator.push("/login");
+    };
 
     let now = Local::now();
     let month = MONTHS[now.month0() as usize];
@@ -96,9 +109,19 @@ pub fn Home() -> Element {
                 div {
                     class: "flex justify-between items-end",
                     div {
-                        h1 {
-                            class: "font-heading text-5xl mb-3",
-                            "{user.name}"
+                        div {
+                            class: "flex items-end gap-4 mb-3",
+                            h1 {
+                                class: "font-heading text-5xl",
+                                "{user.name}"
+                            }
+                            Button {
+                                type: "button",
+                                class: "mb-1",
+                                variant: ButtonVariant::Primary,
+                                onclick: move |_| handle_logout(),
+                                LogOut {}
+                            }
                         }
                         p {
                             class: "text-primary-light",

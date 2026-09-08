@@ -23,7 +23,7 @@ pub fn Login() -> Element {
             Ok(v) => v,
             Err(e) => {
                 toast_api.error(
-                    "Error".to_string(),
+                    "Errore".to_string(),
                     ToastOptions::new()
                         .description(e.to_string())
                         .duration(Duration::from_secs(20)),
@@ -41,7 +41,7 @@ pub fn Login() -> Element {
                         .map(|m| m.to_string())
                         .unwrap_or_else(|| format!("{}: {}", field, err.code));
                     toast_api.error(
-                        "Error".to_string(),
+                        "Errore".to_string(),
                         ToastOptions::new()
                             .description(msg)
                             .duration(Duration::from_secs(20)),
@@ -53,7 +53,7 @@ pub fn Login() -> Element {
 
         if let Err(err) = login(payload).await {
             toast_api.error(
-                "Error".to_string(),
+                "Errore".to_string(),
                 ToastOptions::new()
                     .description(error_message(&err))
                     .duration(Duration::from_secs(20)),
@@ -62,9 +62,9 @@ pub fn Login() -> Element {
         }
 
         toast_api.success(
-            "Success".to_string(),
+            "Completato".to_string(),
             ToastOptions::new()
-                .description("Logged in")
+                .description("Hai eseguito l'accesso")
                 .duration(Duration::from_secs(20)),
         );
         session.get_session().await;
