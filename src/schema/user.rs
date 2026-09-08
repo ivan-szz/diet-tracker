@@ -30,14 +30,18 @@ pub struct LoginUserSchema {
     pub password: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct UpdateUserTargetWeightSchema {
     pub name: String,
+
+    #[validate(range(min = 0.0))]
     pub target_weight_kg: f32,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct UpdateUserStreakSchema {
     pub name: String,
+
+    #[validate(range(min = 0))]
     pub streak: i32,
 }
