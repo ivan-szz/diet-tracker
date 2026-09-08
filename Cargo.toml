@@ -18,6 +18,11 @@ thiserror = "2.0.20"
 dotenvy = { version = "0.15.7", optional = true }
 dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
 dioxus-icons = { version = "0.1.0", default-features = false }
+dioxus-html = { version = "0.7.10", features = ["serialize"] }
+jsonwebtoken = { version =  "11.0.0", features = ["rust_crypto"], optional = true }
+
+[dev-dependencies]
+dioxus-ssr = "0.7.10"
 
 [features]
 default = ["web"]
@@ -28,4 +33,4 @@ desktop = ["dioxus/desktop"]
 # The feature that are only required for the mobile = ["dioxus/mobile"] build target should be optional and only enabled in the mobile = ["dioxus/mobile"] feature
 mobile = ["dioxus/mobile"]
 # The feature that are only required for the server = ["dioxus/server"] build target should be optional and only enabled in the server = ["dioxus/server"] feature
-server = ["dioxus/server", "dep:sqlx", "dep:argon2", "dep:dotenvy"]
+server = ["dioxus/server", "dep:sqlx", "dep:argon2", "dep:dotenvy", "dep:jsonwebtoken"]

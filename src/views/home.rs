@@ -1,7 +1,9 @@
+use crate::components::providers::auth::use_auth;
 use crate::components::ui::button::ButtonVariant;
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::ui::input::Input;
 use crate::components::ui::label::Label;
+use crate::utils::error::error_message;
 use crate::{
     components::{
         ui::{
@@ -19,6 +21,8 @@ use crate::{
 use chrono::{Datelike, Days, Local};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{ArrowRight, Plus};
+use dioxus_primitives::toast::{use_toast, ToastOptions};
+use std::time::Duration;
 
 const HISTORY_DAYS: u64 = 30;
 
@@ -40,6 +44,11 @@ const WEIGHT: [f64; 30] = [
 
 #[component]
 pub fn Home() -> Element {
+    let session = use_auth();
+    let user = session.user.read();
+    let toast_api = use_toast();
+    let navigator = use_navigator();
+
     let now = Local::now();
     let month = MONTHS[now.month0() as usize];
     let year = now.year();
@@ -61,6 +70,21 @@ pub fn Home() -> Element {
 
     let mut is_target_calories_dialog_open = use_signal(|| false);
 
+    if *session.is_loading.read() {
+        return rsx! { div { class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto", } };
+    }
+
+    let Some(user) = user.as_ref() else {
+        toast_api.error(
+            "Error".to_string(),
+            ToastOptions::new()
+                .description("You need to be logged in")
+                .duration(Duration::from_secs(20)),
+        );
+        navigator.push("/login");
+        return rsx! {};
+    };
+
     rsx! {
         div {
             class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto",
@@ -74,8 +98,7 @@ pub fn Home() -> Element {
                     div {
                         h1 {
                             class: "font-heading text-5xl mb-3",
-                            // TODO: Questo diventerà uno state che mostrerà l'utente attualmente selezionato
-                            "Tu"
+                            "{user.name}"
                         }
                         p {
                             class: "text-primary-light",

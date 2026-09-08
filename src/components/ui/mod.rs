@@ -1,13 +1,15 @@
 pub mod accordion;
 pub mod alert_dialog;
-pub mod dialog;
 pub mod badge;
 pub mod button;
 pub mod card;
 pub mod chart;
 pub mod checkbox;
+pub mod dialog;
 pub mod input;
 pub mod label;
 pub mod progress;
 pub mod separator;
 pub mod switch;
+
+pub mod toast;

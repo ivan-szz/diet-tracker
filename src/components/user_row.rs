@@ -22,15 +22,18 @@ pub struct UserRowProps {
     target_calories: i32,
 
     #[props(default = false)]
-    selected: bool
+    selected: bool,
 }
 
 #[component]
 pub fn UserRow(props: UserRowProps) -> Element {
-
-    let hash = props.name.trim().bytes().fold(2_166_136_261_u32, |hash, byte| {
-        (hash ^ u32::from(byte)).wrapping_mul(16_777_619)
-    });
+    let hash = props
+        .name
+        .trim()
+        .bytes()
+        .fold(2_166_136_261_u32, |hash, byte| {
+            (hash ^ u32::from(byte)).wrapping_mul(16_777_619)
+        });
     let color = AVATAR_COLORS[hash as usize % AVATAR_COLORS.len()];
 
     let initials = props

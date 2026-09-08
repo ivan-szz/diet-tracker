@@ -493,7 +493,12 @@ fn build_scales(series: &[ChartSeries]) -> Vec<Scale> {
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
         for peer in series.iter().filter(|peer| peer.unit == line.unit) {
-            for value in peer.values.iter().copied().filter(|value| value.is_finite()) {
+            for value in peer
+                .values
+                .iter()
+                .copied()
+                .filter(|value| value.is_finite())
+            {
                 min = min.min(value);
                 max = max.max(value);
             }

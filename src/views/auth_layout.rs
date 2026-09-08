@@ -1,9 +1,26 @@
+use std::time::Duration;
 use dioxus::prelude::*;
-
+use dioxus_primitives::toast::{use_toast, ToastOptions};
+use crate::components::providers::auth::use_auth;
 use crate::Route;
 
 #[component]
 pub fn AuthLayout() -> Element {
+    let toast_api = use_toast();
+    let navigator = use_navigator();
+    let session = use_auth();
+
+    if session.user.as_ref().is_some() {
+        toast_api.info(
+            "Logged in".to_string(),
+            ToastOptions::new()
+                .description("You are already logged in")
+                .duration(Duration::from_secs(20)),
+        );
+        navigator.push("/");
+        return rsx! {};
+    };
+
     rsx! {
         div {
             class: "w-full h-screen flex",

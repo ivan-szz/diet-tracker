@@ -18,4 +18,8 @@ mod register;
 pub use register::Register;
 
 mod auth_layout;
+
 pub use auth_layout::AuthLayout;
+
+mod providers_layout;
+pub use providers_layout::ProvidersLayout;

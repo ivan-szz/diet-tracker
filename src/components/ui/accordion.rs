@@ -8,7 +8,7 @@ use dioxus_primitives::accordion::{
 pub fn Accordion(props: AccordionProps) -> Element {
     rsx! {
         accordion::Accordion {
-            class: "w-60 [contain:inline-size]",
+            class: "w-full [contain:inline-size]",
             id: props.id,
             allow_multiple_open: props.allow_multiple_open,
             disabled: props.disabled,

@@ -3,7 +3,7 @@ use sqlx::PgPool;
 
 use crate::{
     schema::entry::{
-        CreateEntrySchema, DeleteEntrySchema, FindEntryByIdSchema, FindEntriesByUserSchema,
+        CreateEntrySchema, DeleteEntrySchema, FindEntriesByUserSchema, FindEntryByIdSchema,
         UpdateEntryNotesSchema,
     },
     server::error::ServerError,
@@ -42,7 +42,10 @@ impl Entry {
         Ok(entries)
     }
 
-    pub async fn find_by_id(value: &FindEntryByIdSchema, pool: &PgPool) -> Result<Self, ServerError> {
+    pub async fn find_by_id(
+        value: &FindEntryByIdSchema,
+        pool: &PgPool,
+    ) -> Result<Self, ServerError> {
         let FindEntryByIdSchema { id } = value;
 
         let entry = sqlx::query_as!(Self, "SELECT * FROM entries WHERE id = $1", id,)

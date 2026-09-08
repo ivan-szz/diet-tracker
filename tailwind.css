@@ -5,6 +5,9 @@
   --animate-alert-in: alert-in 150ms ease-out forwards;
   --animate-alert-out: alert-out 150ms ease-in forwards;
   --animate-progress-indeterminate: progress-indeterminate 1s linear infinite;
+  /* `--toast-index` is set per toast by the primitive; it staggers grouped toasts. */
+  --animate-toast-in: toast-in 260ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--toast-index, 0) * 60ms) both;
+  --animate-toast-out: toast-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
   --font-heading: "Caprasimo", serif;
   --font-sans: "Figtree", sans-serif;
   --color-background: #F5EAD8;
@@ -40,6 +43,28 @@
   @keyframes progress-indeterminate {
     from { transform: translateX(-100%); }
     to { transform: translateX(200%); }
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes toast-out {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(110%);
+    }
   }
 }
 

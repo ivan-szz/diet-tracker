@@ -1,20 +1,45 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
-use crate::{
-    schema::user::{RegisterUserSchema, UpdateUserStreakSchema, UpdateUserTargetWeightSchema},
-    server::error::ServerError,
-    utils::argon::{hash, verify},
-};
+use crate::schema::user::UserSchema;
+use crate::server::error::ServerError;
 
 pub struct User {
     pub id: i32,
     pub name: String,
-    pub password_hash: Option<String>,
+    pub password_hash: String,
     pub streak: i32,
-    pub target_weight_kg: f32,
+    pub target_weight_kg: Option<f32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+pub struct RegisterUser {
+    pub name: String,
+    pub password_hash: String,
+}
+
+pub struct UpdateTargetWeight {
+    pub name: String,
+    pub target_weight_kg: f32,
+}
+
+pub struct UpdateStreak {
+    pub name: String,
+    pub streak: i32,
+}
+
+impl From<User> for UserSchema {
+    fn from(value: User) -> Self {
+        UserSchema {
+            id: value.id,
+            name: value.name,
+            streak: value.streak,
+            target_weight_kg: value.target_weight_kg,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+        }
+    }
 }
 
 impl User {
@@ -26,16 +51,25 @@ impl User {
         Ok(users)
     }
 
-    pub async fn create(value: &RegisterUserSchema, pool: &PgPool) -> Result<Self, ServerError> {
-        let RegisterUserSchema { name, password } = value;
+    pub async fn find_by_name(name: &str, pool: &PgPool) -> Result<Option<Self>, ServerError> {
+        let user = sqlx::query_as!(Self, "SELECT * FROM users WHERE name = $1", name)
+            .fetch_optional(pool)
+            .await?;
 
-        let hashed_password = hash(password)?;
+        Ok(user)
+    }
+
+    pub async fn create(value: &RegisterUser, pool: &PgPool) -> Result<Self, ServerError> {
+        let RegisterUser {
+            name,
+            password_hash,
+        } = value;
 
         let user = sqlx::query_as!(
             Self,
             "INSERT INTO users (name, password_hash) VALUES ($1, $2) RETURNING *",
             name,
-            hashed_password
+            password_hash
         )
         .fetch_one(pool)
         .await?;
@@ -44,10 +78,10 @@ impl User {
     }
 
     pub async fn update_target_weight(
-        value: &UpdateUserTargetWeightSchema,
+        value: &UpdateTargetWeight,
         pool: &PgPool,
     ) -> Result<Self, ServerError> {
-        let UpdateUserTargetWeightSchema {
+        let UpdateTargetWeight {
             name,
             target_weight_kg,
         } = value;
@@ -64,11 +98,8 @@ impl User {
         Ok(user)
     }
 
-    pub async fn update_streak(
-        value: &UpdateUserStreakSchema,
-        pool: &PgPool,
-    ) -> Result<Self, ServerError> {
-        let UpdateUserStreakSchema { name, streak } = value;
+    pub async fn update_streak(value: &UpdateStreak, pool: &PgPool) -> Result<Self, ServerError> {
+        let UpdateStreak { name, streak } = value;
 
         let user = sqlx::query_as!(
             Self,
@@ -80,11 +111,5 @@ impl User {
         .await?;
 
         Ok(user)
-    }
-
-    pub fn verify_password(&self, password: &str) -> Result<(), ServerError> {
-        let hash = self.password_hash.as_deref().unwrap_or_default();
-        verify(password, hash)?;
-        Ok(())
     }
 }
