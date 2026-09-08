@@ -1,3 +1,4 @@
+use crate::api::auth::logout;
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::button::ButtonVariant;
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
@@ -16,14 +17,13 @@ use crate::{
         },
         DayBlock, EntryRow, UserRow,
     },
-    utils::constants::{MONTHS, SHORT_MONTHS},
+    utils::constants::Month,
 };
 use chrono::{Datelike, Days, Local};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{ArrowRight, LogOut, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
-use crate::api::auth::logout;
 
 const HISTORY_DAYS: u64 = 30;
 
@@ -63,7 +63,7 @@ pub fn Home() -> Element {
     };
 
     let now = Local::now();
-    let month = MONTHS[now.month0() as usize];
+    let month = Month::from_zero_based(now.month0());
     let year = now.year();
 
     // La riga in basso del grafico: gli ultimi giorni, dal più vecchio a oggi.
@@ -71,7 +71,11 @@ pub fn Home() -> Element {
         .rev()
         .map(|back| {
             let day = now.date_naive() - Days::new(back);
-            format!("{} {}", day.day(), SHORT_MONTHS[day.month0() as usize])
+            format!(
+                "{} {}",
+                day.day(),
+                Month::from_zero_based(day.month0()).short_name()
+            )
         })
         .collect();
 
@@ -104,7 +108,7 @@ pub fn Home() -> Element {
             div {
                 p {
                     class: "text-accent text-xs font-semibold mb-2",
-                    "DIARIO ALIMENTARE · {month} {year}"
+                    "DIARIO ALIMENTARE · {month.full_name()} {year}"
                 }
                 div {
                     class: "flex justify-between items-end",

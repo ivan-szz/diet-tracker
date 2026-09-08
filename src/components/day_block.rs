@@ -1,6 +1,6 @@
 use crate::{
     components::ui::badge::{Badge, BadgeVariant},
-    utils::constants::SHORT_MONTHS,
+    utils::constants::Month,
 };
 use chrono::{Datelike, Days, Local, NaiveDate};
 use dioxus::prelude::*;
@@ -38,7 +38,7 @@ pub fn DayBlock(props: DayBlockProps) -> Element {
                 class: "flex items-center justify-between",
                 p {
                     class: "font-heading text-xl",
-                    "{prefix}{props.date.day()} {SHORT_MONTHS[props.date.month0() as usize]}"
+                    "{prefix}{props.date.day()} {Month::from_zero_based(props.date.month0()).short_name()}"
                 }
                 Badge {
                     variant: BadgeVariant::Primary,
