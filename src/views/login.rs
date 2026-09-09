@@ -115,6 +115,7 @@ pub fn Login() -> Element {
                     }
                 }
                 Button {
+                    type: "submit",
                     class: "font-heading",
                     "Accedi"
                 }

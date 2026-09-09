@@ -113,6 +113,7 @@ pub fn Register() -> Element {
                     }
                 }
                 Button {
+                    type: "submit",
                     class: "font-heading",
                     "Registrati"
                 }

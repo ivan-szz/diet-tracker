@@ -1,16 +1,19 @@
-use crate::api::auth::logout;
+use crate::api::{auth::logout, users};
+use crate::components::monthly_chart::MonthlyChart;
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::button::ButtonVariant;
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::ui::input::Input;
 use crate::components::ui::label::Label;
+use crate::schema::{day::DaySchema, entry::EntrySchema, user::UserSchema};
+use crate::utils::error::error_message;
 use crate::{
     components::{
         ui::{
             accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger},
             button::Button,
             card::Card,
-            chart::{Chart, ChartSeries},
+            chart::ChartSeries,
             progress::Progress,
             separator::Separator,
         },
@@ -23,7 +26,12 @@ use dioxus::prelude::*;
 use dioxus_icons::lucide::{ArrowRight, LogOut, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
-use crate::components::monthly_chart::MonthlyChart;
+
+struct HomeData {
+    users: Vec<UserSchema>,
+    days: Vec<DaySchema>,
+    entries: Vec<EntrySchema>,
+}
 
 // TODO: Questi tre andamenti sono segnaposto, arriveranno dal repo dei giorni dell'utente selezionato.
 const CALORIES: [f64; 30] = [
@@ -72,6 +80,39 @@ pub fn Home() -> Element {
 
     let mut is_target_calories_dialog_open = use_signal(|| false);
 
+    let home_data = use_resource(move || {
+        let is_authenticated = session.user.read().is_some();
+
+        async move {
+            if !is_authenticated {
+                return HomeData {
+                    users: vec![],
+                    days: vec![],
+                    entries: vec![],
+                };
+            }
+
+            let users = match users::list().await {
+                Ok(users) => users,
+                Err(error) => {
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(error_message(&error))
+                            .duration(Duration::from_secs(20)),
+                    );
+                    vec![]
+                }
+            };
+
+            HomeData {
+                users,
+                days: vec![],
+                entries: vec![],
+            }
+        }
+    });
+
     if *session.is_loading.read() {
         return rsx! { div { class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto", } };
     }
@@ -85,6 +126,11 @@ pub fn Home() -> Element {
         );
         navigator.push("/login");
         return rsx! {};
+    };
+
+    let home_data_state = home_data.read();
+    let Some(home_data) = home_data_state.as_ref() else {
+        return rsx! { div { class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto", } };
     };
 
     rsx! {
@@ -230,24 +276,18 @@ pub fn Home() -> Element {
                             }
                         }
                         AccordionContent {
-                            UserRow {
-                                index: 1,
-                                name: "Ivan Sozza",
-                                streak: 13,
-                                month: "agosto",
-                                weight_delta: -2.6,
-                                calories: 700,
-                                target_calories: 1800,
-                            }
-                            UserRow {
-                                index: 2,
-                                name: "Claudio Bisio",
-                                streak: 12,
-                                month: "maggio",
-                                weight_delta: -1.4,
-                                calories: 400,
-                                target_calories: 1500,
-                                selected: true
+                            for (index, community_user) in home_data.users.iter().enumerate() {
+                                UserRow {
+                                    key: "{community_user.id}",
+                                    index: index as i32 + 1,
+                                    name: community_user.name.clone(),
+                                    streak: community_user.streak,
+                                    month: month.full_name().to_string(),
+                                    weight_delta: 0.0,
+                                    calories: 0,
+                                    target_calories: 0,
+                                    selected: community_user.id == user.id,
+                                }
                             }
                         }
                     }
