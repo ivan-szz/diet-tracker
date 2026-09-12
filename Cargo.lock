@@ -1203,6 +1203,7 @@ name = "diet-tracker-dioxus"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "base64",
  "chrono",
  "dioxus",
  "dioxus-html",
@@ -1211,8 +1212,10 @@ dependencies = [
  "dioxus-ssr",
  "dotenvy",
  "jsonwebtoken",
+ "rand 0.9.5",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "thiserror 2.0.20",
  "validator",
@@ -6058,6 +6061,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -6124,6 +6128,7 @@ dependencies = [
  "sqlx-core",
  "thiserror 2.0.20",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -6159,6 +6164,7 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.20",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -6185,6 +6191,7 @@ dependencies = [
  "thiserror 2.0.20",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]

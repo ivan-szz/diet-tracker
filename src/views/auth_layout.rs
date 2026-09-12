@@ -1,8 +1,8 @@
-use std::time::Duration;
-use dioxus::prelude::*;
-use dioxus_primitives::toast::{use_toast, ToastOptions};
 use crate::components::providers::auth::use_auth;
 use crate::Route;
+use dioxus::prelude::*;
+use dioxus_primitives::toast::{use_toast, ToastOptions};
+use std::time::Duration;
 
 #[component]
 pub fn AuthLayout() -> Element {

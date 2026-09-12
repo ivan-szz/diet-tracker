@@ -1,4 +1,6 @@
+use crate::api::auth::logout;
 use crate::api::auth::me;
+use crate::api::auth::refresh;
 use crate::schema::user::UserSchema;
 use dioxus::prelude::*;
 
@@ -11,6 +13,12 @@ pub struct AuthState {
 impl AuthState {
     pub async fn get_session(mut self) {
         self.is_loading.set(true);
+
+        if refresh().await.is_err() {
+            let _ = logout().await;
+            self.clear();
+            return;
+        }
 
         match me().await {
             Ok(user) => self.user.set(Some(user)),

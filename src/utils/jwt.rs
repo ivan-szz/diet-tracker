@@ -9,6 +9,8 @@ use std::sync::OnceLock;
 
 static JWT_SECRET: OnceLock<String> = OnceLock::new();
 
+pub const ACCESS_TOKEN_TTL: Duration = Duration::minutes(10);
+
 fn get_jwt_secret() -> &'static str {
     JWT_SECRET.get_or_init(|| env::var("JWT_SECRET").expect("Missing JWT_SECRET"))
 }
@@ -21,10 +23,16 @@ pub struct Claims {
 
 impl From<&User> for Claims {
     fn from(value: &User) -> Self {
-        let expiration = Utc::now() + Duration::minutes(10);
+        Self::for_subject(&value.name)
+    }
+}
+
+impl Claims {
+    pub fn for_subject(subject: &str) -> Self {
+        let expiration = Utc::now() + ACCESS_TOKEN_TTL;
         Self {
             exp: expiration.timestamp() as usize,
-            sub: value.name.to_string(),
+            sub: subject.to_string(),
         }
     }
 }

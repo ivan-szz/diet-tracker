@@ -22,3 +22,11 @@ pub fn session_cookie_attrs() -> &'static str {
         "SameSite=Lax; Path=/; HttpOnly; Secure"
     }
 }
+
+pub fn refresh_cookie_attrs() -> &'static str {
+    if cfg!(debug_assertions) {
+        "SameSite=Lax; Path=/api/auth; HttpOnly"
+    } else {
+        "SameSite=Lax; Path=/api/auth; HttpOnly; Secure"
+    }
+}

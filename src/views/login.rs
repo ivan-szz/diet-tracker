@@ -1,4 +1,5 @@
 use crate::api::auth::login;
+use crate::components::providers::auth::use_auth;
 use crate::schema::user::LoginUserSchema;
 use crate::utils::error::error_message;
 use crate::{
@@ -9,7 +10,6 @@ use dioxus::prelude::*;
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
 use validator::Validate;
-use crate::components::providers::auth::use_auth;
 
 #[component]
 pub fn Login() -> Element {
