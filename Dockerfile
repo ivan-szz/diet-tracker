@@ -26,7 +26,7 @@ ENV PATH="/.cargo/bin:$PATH"
 RUN dx bundle --web --release
 
 FROM chef AS runtime
-COPY --from=builder /app/target/dx/diet-tracker/release/web/ /usr/local/app
+COPY --from=builder /app/target/dx/diet-tracker-dioxus/release/web/ /usr/local/app
 
 # set our port and make sure to listen for all connections
 ENV PORT=8080
