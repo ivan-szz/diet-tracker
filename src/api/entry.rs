@@ -25,6 +25,15 @@ pub async fn list() -> ServerFnResult<Vec<EntrySchema>> {
     Ok(entry::list(&current_user.name, &pool).await?)
 }
 
+/// Returns the given user's entries; entry history is public read data for
+/// every authenticated user, not just its owner.
+#[get("/api/entries/community?user_name", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
+pub async fn list_for_user(user_name: String) -> ServerFnResult<Vec<EntrySchema>> {
+    current_user_from_cookie(&cookie, &pool).await?;
+
+    Ok(entry::list(&user_name, &pool).await?)
+}
+
 #[post("/api/entries", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
 pub async fn create(payload: CreateEntrySchema) -> ServerFnResult<EntrySchema> {
     payload.validate().map_err(ServerError::from)?;

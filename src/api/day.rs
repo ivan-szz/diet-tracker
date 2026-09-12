@@ -26,6 +26,15 @@ pub async fn list() -> ServerFnResult<Vec<DaySchema>> {
     Ok(day::list(&current_user.name, &pool).await?)
 }
 
+/// Returns the given user's days; day history is public read data for every
+/// authenticated user, not just its owner.
+#[get("/api/days/community?user_name", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
+pub async fn list_for_user(user_name: String) -> ServerFnResult<Vec<DaySchema>> {
+    current_user_from_cookie(&cookie, &pool).await?;
+
+    Ok(day::list(&user_name, &pool).await?)
+}
+
 #[post("/api/days", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
 pub async fn create(payload: CreateDaySchema) -> ServerFnResult<DaySchema> {
     payload.validate().map_err(ServerError::from)?;

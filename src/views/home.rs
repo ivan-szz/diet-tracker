@@ -29,9 +29,19 @@ use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
 
 struct HomeData {
-    users: Vec<UserSchema>,
+    community: Vec<CommunityMember>,
     days: Vec<DaySchema>,
     entries: Vec<EntrySchema>,
+}
+
+/// A community member paired with the stats `UserRow` shows for them. Their
+/// `days`/`entries` are public read data, fetched the same way regardless of
+/// whether they belong to the signed-in user.
+struct CommunityMember {
+    user: UserSchema,
+    weight_delta: f32,
+    calories: i32,
+    target_calories: i32,
 }
 
 /// Mirrors `MonthlyChart`'s own date range exactly, so the series built here
@@ -92,6 +102,35 @@ fn trailing_trend(
     (calories_series, target_series, weight_series)
 }
 
+/// Calories eaten and calorie target for `date`, from one user's `days`/`entries`.
+fn day_progress(date: NaiveDate, days: &[DaySchema], entries: &[EntrySchema]) -> (i32, i32) {
+    let target_calories = days
+        .iter()
+        .find(|day| day.date == date)
+        .map(|day| day.target_calories)
+        .unwrap_or(0);
+
+    let calories = entries
+        .iter()
+        .filter(|entry| entry.date == date)
+        .map(|entry| entry.calories)
+        .sum();
+
+    (calories, target_calories)
+}
+
+/// Weight change between the first and the latest recorded day, in kg. `days`
+/// is expected sorted newest first, matching what the days endpoints return.
+fn weight_delta(days: &[DaySchema]) -> f32 {
+    let latest_kg = days.iter().find_map(|day| day.weight_kg);
+    let first_kg = days.iter().rev().find_map(|day| day.weight_kg);
+
+    match (latest_kg, first_kg) {
+        (Some(latest_kg), Some(first_kg)) => latest_kg - first_kg,
+        _ => 0.0,
+    }
+}
+
 #[component]
 pub fn Home() -> Element {
     let session = use_auth();
@@ -121,28 +160,15 @@ pub fn Home() -> Element {
     let mut is_saving_target_calories = use_signal(|| false);
 
     let mut home_data_resource = use_resource(move || {
-        let is_authenticated = session.user.read().is_some();
+        let current_user_id = session.user.read().as_ref().map(|user| user.id);
 
         async move {
-            if !is_authenticated {
+            let Some(current_user_id) = current_user_id else {
                 return HomeData {
-                    users: vec![],
+                    community: vec![],
                     days: vec![],
                     entries: vec![],
                 };
-            }
-
-            let users = match users::list().await {
-                Ok(users) => users,
-                Err(error) => {
-                    toast_api.error(
-                        "Errore".to_string(),
-                        ToastOptions::new()
-                            .description(error_message(&error))
-                            .duration(Duration::from_secs(20)),
-                    );
-                    vec![]
-                }
             };
 
             let days = match day::list().await {
@@ -171,8 +197,72 @@ pub fn Home() -> Element {
                 }
             };
 
+            let users = match users::list().await {
+                Ok(users) => users,
+                Err(error) => {
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(error_message(&error))
+                            .duration(Duration::from_secs(20)),
+                    );
+                    vec![]
+                }
+            };
+
+            let mut community = Vec::with_capacity(users.len());
+
+            for member in users {
+                // The signed-in user's own days/entries are already fetched
+                // above; everyone else's are public read data, fetched
+                // on-demand through the community-scoped endpoints.
+                let (calories, target_calories, member_weight_delta) = if member.id
+                    == current_user_id
+                {
+                    let (calories, target_calories) = day_progress(today, &days, &entries);
+                    (calories, target_calories, weight_delta(&days))
+                } else {
+                    let member_days = match day::list_for_user(member.name.clone()).await {
+                        Ok(days) => days,
+                        Err(error) => {
+                            toast_api.error(
+                                "Errore".to_string(),
+                                ToastOptions::new()
+                                    .description(error_message(&error))
+                                    .duration(Duration::from_secs(20)),
+                            );
+                            vec![]
+                        }
+                    };
+
+                    let member_entries = match entry::list_for_user(member.name.clone()).await {
+                        Ok(entries) => entries,
+                        Err(error) => {
+                            toast_api.error(
+                                "Errore".to_string(),
+                                ToastOptions::new()
+                                    .description(error_message(&error))
+                                    .duration(Duration::from_secs(20)),
+                            );
+                            vec![]
+                        }
+                    };
+
+                    let (calories, target_calories) =
+                        day_progress(today, &member_days, &member_entries);
+                    (calories, target_calories, weight_delta(&member_days))
+                };
+
+                community.push(CommunityMember {
+                    user: member,
+                    weight_delta: member_weight_delta,
+                    calories,
+                    target_calories,
+                });
+            }
+
             HomeData {
-                users,
+                community,
                 days,
                 entries,
             }
@@ -469,17 +559,17 @@ pub fn Home() -> Element {
                             }
                         }
                         AccordionContent {
-                            for (index, community_user) in home_data.users.iter().enumerate() {
+                            for (index, member) in home_data.community.iter().enumerate() {
                                 UserRow {
-                                    key: "{community_user.id}",
+                                    key: "{member.user.id}",
                                     index: index as i32 + 1,
-                                    name: community_user.name.clone(),
-                                    streak: community_user.streak,
+                                    name: member.user.name.clone(),
+                                    streak: member.user.streak,
                                     month: month.full_name().to_string(),
-                                    weight_delta: 0.0,
-                                    calories: 0,
-                                    target_calories: 0,
-                                    selected: community_user.id == user.id,
+                                    weight_delta: member.weight_delta,
+                                    calories: member.calories,
+                                    target_calories: member.target_calories,
+                                    selected: member.user.id == user.id,
                                 }
                             }
                         }
