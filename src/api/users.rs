@@ -8,7 +8,7 @@ use crate::server::error::ServerError;
 #[cfg(feature = "server")]
 use crate::server::services::users;
 #[cfg(feature = "server")]
-use crate::server::session::current_user_from_cookie;
+use crate::server::session::{current_user_from_cookie, ensure_owner};
 #[cfg(feature = "server")]
 use dioxus::fullstack::{headers::Cookie, TypedHeader};
 #[cfg(feature = "server")]
@@ -41,13 +41,4 @@ pub async fn update_streak(payload: UpdateUserStreakSchema) -> ServerFnResult<Us
     ensure_owner(&payload.name, &current_user)?;
 
     Ok(users::update_streak(&payload, &pool).await?)
-}
-
-#[cfg(feature = "server")]
-fn ensure_owner(name: &str, current_user: &UserSchema) -> Result<(), ServerError> {
-    if name == current_user.name {
-        Ok(())
-    } else {
-        Err(ServerError::Unauthorized)
-    }
 }

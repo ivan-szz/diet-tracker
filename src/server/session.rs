@@ -30,3 +30,11 @@ pub fn refresh_cookie_attrs() -> &'static str {
         "SameSite=Lax; Path=/api/auth; HttpOnly; Secure"
     }
 }
+
+pub fn ensure_owner(name: &str, current_user: &UserSchema) -> Result<(), ServerError> {
+    if name == current_user.name {
+        Ok(())
+    } else {
+        Err(ServerError::Unauthorized)
+    }
+}

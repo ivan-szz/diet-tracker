@@ -3,8 +3,8 @@ use sqlx::PgPool;
 
 use crate::{
     schema::entry::{
-        CreateEntrySchema, DeleteEntrySchema, FindEntriesByUserSchema, FindEntryByIdSchema,
-        UpdateEntryNotesSchema,
+        CreateEntrySchema, DeleteEntrySchema, EntrySchema, FindEntriesByUserSchema,
+        FindEntryByIdSchema, UpdateEntryNotesSchema,
     },
     server::error::ServerError,
 };
@@ -18,6 +18,21 @@ pub struct Entry {
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl From<Entry> for EntrySchema {
+    fn from(value: Entry) -> Self {
+        EntrySchema {
+            id: value.id,
+            date: value.date,
+            user_id: value.user_id,
+            name: value.name,
+            calories: value.calories,
+            notes: value.notes,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+        }
+    }
 }
 
 impl Entry {
@@ -85,15 +100,23 @@ impl Entry {
         value: &UpdateEntryNotesSchema,
         pool: &PgPool,
     ) -> Result<Self, ServerError> {
-        let UpdateEntryNotesSchema { id, notes } = value;
+        let UpdateEntryNotesSchema {
+            id,
+            user_name,
+            notes,
+        } = value;
 
         let entry = sqlx::query_as!(
             Self,
             "UPDATE entries
              SET notes = $1
-             WHERE id = $2
-             RETURNING *",
+             FROM users
+             WHERE users.id = entries.user_id
+               AND users.name = $2
+               AND entries.id = $3
+             RETURNING entries.*",
             notes.as_deref(),
+            user_name,
             id,
         )
         .fetch_one(pool)
@@ -103,11 +126,19 @@ impl Entry {
     }
 
     pub async fn delete_entry(value: &DeleteEntrySchema, pool: &PgPool) -> Result<(), ServerError> {
-        let DeleteEntrySchema { id } = value;
+        let DeleteEntrySchema { id, user_name } = value;
 
-        sqlx::query!("DELETE FROM entries WHERE id = $1", id,)
-            .execute(pool)
-            .await?;
+        sqlx::query!(
+            "DELETE FROM entries
+             USING users
+             WHERE users.id = entries.user_id
+               AND users.name = $1
+               AND entries.id = $2",
+            user_name,
+            id,
+        )
+        .execute(pool)
+        .await?;
 
         Ok(())
     }

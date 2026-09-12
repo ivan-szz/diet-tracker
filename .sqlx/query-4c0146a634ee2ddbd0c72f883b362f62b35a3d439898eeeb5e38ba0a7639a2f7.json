@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM refresh_tokens\n             WHERE family_id = (\n                 SELECT family_id\n                 FROM refresh_tokens\n                 WHERE token_hash = $1\n             )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c0146a634ee2ddbd0c72f883b362f62b35a3d439898eeeb5e38ba0a7639a2f7"
+}

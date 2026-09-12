@@ -11,6 +11,8 @@ pub enum ServerError {
     Unauthorized,
     #[error("User already exists")]
     UserAlreadyExists,
+    #[error("Target calories required")]
+    MissingTargetCalories,
     #[error(transparent)]
     Validation(#[from] validator::ValidationErrors),
     #[error(transparent)]
@@ -28,6 +30,11 @@ impl ServerError {
             ServerError::Unauthorized => (401, "Non sei autenticato", None),
             ServerError::InvalidCredentials => (401, "Nome utente o password errati", None),
             ServerError::UserAlreadyExists => (409, "Nome utente già in uso", None),
+            ServerError::MissingTargetCalories => (
+                400,
+                "Specifica l'obiettivo calorico: non c'è un giorno precedente da cui ereditarlo",
+                None,
+            ),
             ServerError::Jwt(_) => (401, "Sessione non valida", None),
             ServerError::Database(_) | ServerError::Hashing(_) => {
                 (500, "Errore interno del server", None)

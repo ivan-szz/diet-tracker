@@ -1,10 +1,11 @@
-use crate::api::{auth::logout, users};
+use crate::api::{auth::logout, day, entry, users};
 use crate::components::monthly_chart::MonthlyChart;
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::button::ButtonVariant;
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::ui::input::Input;
 use crate::components::ui::label::Label;
+use crate::schema::day::{CreateDaySchema, UpdateDayTargetCaloriesSchema};
 use crate::schema::{day::DaySchema, entry::EntrySchema, user::UserSchema};
 use crate::utils::error::error_message;
 use crate::{
@@ -21,7 +22,7 @@ use crate::{
     },
     utils::constants::Month,
 };
-use chrono::{Datelike, Days, Local};
+use chrono::{Datelike, Days, Local, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{ArrowRight, LogOut, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
@@ -33,21 +34,63 @@ struct HomeData {
     entries: Vec<EntrySchema>,
 }
 
-// TODO: Questi tre andamenti sono segnaposto, arriveranno dal repo dei giorni dell'utente selezionato.
-const CALORIES: [f64; 30] = [
-    1450.0, 1720.0, 1980.0, 1610.0, 1290.0, 2050.0, 1870.0, 1540.0, 1660.0, 1930.0, 1380.0, 1750.0,
-    1610.0, 2110.0, 1480.0, 1690.0, 1820.0, 1350.0, 1570.0, 4000.0, 1710.0, 1440.0, 1880.0, 1620.0,
-    1300.0, 1990.0, 1750.0, 1530.0, 1680.0, 1420.0,
-];
-const TARGET_CALORIES: [f64; 30] = [
-    2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0,
-    1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0,
-    1800.0, 1800.0, 1800.0, 1800.0, 1800.0, 1800.0,
-];
-const WEIGHT: [f64; 30] = [
-    95.5, 95.4, 95.6, 95.2, 95.0, 95.1, 94.8, 94.6, 94.7, 94.4, 94.2, 94.3, 94.0, 93.8, 93.9, 93.7,
-    93.5, 93.6, 93.4, 93.3, 93.5, 93.2, 93.0, 93.1, 92.9, 92.8, 93.0, 92.8, 92.6, 92.7,
-];
+/// Mirrors `MonthlyChart`'s own date range exactly, so the series built here
+/// line up with the day axis it renders internally.
+fn trailing_month_dates(today: NaiveDate) -> Vec<NaiveDate> {
+    let first_day_of_current_month = today.with_day(1).expect("a date always has day 1");
+    let last_day_of_previous_month = first_day_of_current_month - Days::new(1);
+    let start_date = last_day_of_previous_month
+        .with_day(today.day())
+        .unwrap_or(first_day_of_current_month);
+
+    let mut dates = Vec::new();
+    let mut date = start_date;
+    while date <= today {
+        dates.push(date);
+        date = date + Days::new(1);
+    }
+    dates
+}
+
+/// One value per day in `dates`, ascending. A day with no entries shows 0
+/// calories; target calories and weight forward-fill from the last known day,
+/// since the user simply didn't touch those on a day without a `Day` row.
+fn trailing_trend(
+    dates: &[NaiveDate],
+    days: &[DaySchema],
+    entries: &[EntrySchema],
+) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+    let mut sorted_days: Vec<&DaySchema> = days.iter().collect();
+    sorted_days.sort_by_key(|day| day.date);
+    let mut day_cursor = sorted_days.into_iter().peekable();
+
+    let mut calories_series = Vec::with_capacity(dates.len());
+    let mut target_series = Vec::with_capacity(dates.len());
+    let mut weight_series = Vec::with_capacity(dates.len());
+
+    let mut last_target: Option<i32> = None;
+    let mut last_weight: Option<f32> = None;
+
+    for &date in dates {
+        while day_cursor.peek().is_some_and(|day| day.date <= date) {
+            let day = day_cursor.next().expect("peeked Some above");
+            last_target = Some(day.target_calories);
+            last_weight = day.weight_kg.or(last_weight);
+        }
+
+        target_series.push(last_target.unwrap_or(0) as f64);
+        weight_series.push(last_weight.unwrap_or(0.0) as f64);
+
+        let calories: i32 = entries
+            .iter()
+            .filter(|entry| entry.date == date)
+            .map(|entry| entry.calories)
+            .sum();
+        calories_series.push(calories as f64);
+    }
+
+    (calories_series, target_series, weight_series)
+}
 
 #[component]
 pub fn Home() -> Element {
@@ -71,16 +114,13 @@ pub fn Home() -> Element {
     let now = Local::now();
     let month = Month::from_zero_based(now.month0());
     let year = now.year();
-
-    let target_kg: f32 = 65.0;
-    let current_kg: f32 = 92.7;
-    let starting_kg: f32 = 95.5;
-    let percent =
-        100.0 - (100.0 / ((starting_kg - target_kg).abs() / (current_kg - target_kg).abs())) as f64;
+    let today = now.date_naive();
 
     let mut is_target_calories_dialog_open = use_signal(|| false);
+    let mut target_calories_input = use_signal(String::new);
+    let mut is_saving_target_calories = use_signal(|| false);
 
-    let home_data = use_resource(move || {
+    let mut home_data_resource = use_resource(move || {
         let is_authenticated = session.user.read().is_some();
 
         async move {
@@ -105,10 +145,36 @@ pub fn Home() -> Element {
                 }
             };
 
+            let days = match day::list().await {
+                Ok(days) => days,
+                Err(error) => {
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(error_message(&error))
+                            .duration(Duration::from_secs(20)),
+                    );
+                    vec![]
+                }
+            };
+
+            let entries = match entry::list().await {
+                Ok(entries) => entries,
+                Err(error) => {
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(error_message(&error))
+                            .duration(Duration::from_secs(20)),
+                    );
+                    vec![]
+                }
+            };
+
             HomeData {
                 users,
-                days: vec![],
-                entries: vec![],
+                days,
+                entries,
             }
         }
     });
@@ -128,9 +194,112 @@ pub fn Home() -> Element {
         return rsx! {};
     };
 
-    let home_data_state = home_data.read();
+    let home_data_state = home_data_resource.read();
     let Some(home_data) = home_data_state.as_ref() else {
         return rsx! { div { class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto", } };
+    };
+
+    let today_day = home_data.days.iter().find(|day| day.date == today);
+    let today_has_day = today_day.is_some();
+    let today_target_calories = today_day.map(|day| day.target_calories);
+    let today_target_calories_label = today_target_calories
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "–".to_string());
+    let today_calories: i32 = home_data
+        .entries
+        .iter()
+        .filter(|entry| entry.date == today)
+        .map(|entry| entry.calories)
+        .sum();
+
+    let latest_weight = home_data
+        .days
+        .iter()
+        .find_map(|day| day.weight_kg.map(|kg| (kg, day.date)));
+    let first_weight = home_data
+        .days
+        .iter()
+        .rev()
+        .find_map(|day| day.weight_kg.map(|kg| (kg, day.date)));
+    let current_kg = latest_weight.map(|(kg, _)| kg);
+    let starting_kg = first_weight.map(|(kg, _)| kg);
+    let starting_month =
+        first_weight.map(|(_, date)| Month::from_zero_based(date.month0()).full_name());
+    let target_kg = user.target_weight_kg;
+
+    let weight_progress = match (starting_kg, current_kg, target_kg) {
+        (Some(starting_kg), Some(current_kg), Some(target_kg)) => {
+            let percent: f64 = 100.0
+                - (100.0 / ((starting_kg - target_kg).abs() / (current_kg - target_kg).abs()))
+                    as f64;
+            Some((starting_kg, current_kg, target_kg, percent))
+        }
+        _ => None,
+    };
+
+    let chart_dates = trailing_month_dates(today);
+    let (calories_series, target_calories_series, weight_series) =
+        trailing_trend(&chart_dates, &home_data.days, &home_data.entries);
+
+    let user_name = user.name.clone();
+    let handle_save_target_calories = move || {
+        let user_name = user_name.clone();
+        async move {
+            let Ok(target_calories) = target_calories_input().trim().parse::<i32>() else {
+                toast_api.error(
+                    "Errore".to_string(),
+                    ToastOptions::new()
+                        .description("Inserisci un numero di calorie valido")
+                        .duration(Duration::from_secs(20)),
+                );
+                return;
+            };
+
+            is_saving_target_calories.set(true);
+
+            let result = if today_has_day {
+                day::update_target_calories(UpdateDayTargetCaloriesSchema {
+                    user_name,
+                    date: today,
+                    target_calories,
+                })
+                .await
+                .map(|_| ())
+            } else {
+                day::create(CreateDaySchema {
+                    date: today,
+                    user_name,
+                    weight_kg: None,
+                    target_calories: Some(target_calories),
+                    notes: None,
+                })
+                .await
+                .map(|_| ())
+            };
+
+            is_saving_target_calories.set(false);
+
+            match result {
+                Ok(()) => {
+                    is_target_calories_dialog_open.set(false);
+                    home_data_resource.restart();
+                    toast_api.success(
+                        "Fatto".to_string(),
+                        ToastOptions::new()
+                            .description("Obiettivo calorico aggiornato")
+                            .duration(Duration::from_secs(20)),
+                    );
+                }
+                Err(error) => {
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(error_message(&error))
+                            .duration(Duration::from_secs(20)),
+                    );
+                }
+            }
+        }
     };
 
     rsx! {
@@ -166,13 +335,24 @@ pub fn Home() -> Element {
                     div {
                         class: "flex gap-8 content-center",
                         div {
-                            p {
-                                class: "font-heading text-2xl mb-1",
-                                "78.5 kg"
-                            }
-                            p {
-                                class: "text-xs text-primary-light",
-                                "-4.9 kg da maggio"
+                            if let (Some(current_kg), Some(starting_kg)) = (current_kg, starting_kg) {
+                                p {
+                                    class: "font-heading text-2xl mb-1",
+                                    "{current_kg:.1} kg"
+                                }
+                                p {
+                                    class: "text-xs text-primary-light",
+                                    "{(current_kg - starting_kg):.1} kg da {starting_month.unwrap_or_default()}"
+                                }
+                            } else {
+                                p {
+                                    class: "font-heading text-2xl mb-1",
+                                    "—"
+                                }
+                                p {
+                                    class: "text-xs text-primary-light",
+                                    "Nessun peso registrato"
+                                }
                             }
                         }
                         div {
@@ -183,10 +363,17 @@ pub fn Home() -> Element {
                         div {
                             class: "cursor-pointer",
                             role: "button",
-                            onclick: move |_| is_target_calories_dialog_open.set(true),
+                            onclick: move |_| {
+                                target_calories_input.set(
+                                    today_target_calories
+                                        .map(|value| value.to_string())
+                                        .unwrap_or_default(),
+                                );
+                                is_target_calories_dialog_open.set(true);
+                            },
                             p {
                                 class: "font-heading text-2xl mb-1",
-                                "700 / 1800"
+                                "{today_calories} / {today_target_calories_label}"
                             }
                             p {
                                 class: "text-xs text-primary-light",
@@ -201,7 +388,10 @@ pub fn Home() -> Element {
                             }
                             DialogDescription {
                                 form {
-                                    onsubmit: move |e| e.prevent_default(),
+                                    onsubmit: move |e| {
+                                        e.prevent_default();
+                                        handle_save_target_calories()
+                                    },
                                     div {
                                         class: "space-y-2 mb-6",
                                         Label {
@@ -211,7 +401,8 @@ pub fn Home() -> Element {
                                         Input {
                                             id: "target_calories",
                                             name: "target_calories",
-                                            value: 1800
+                                            value: "{target_calories_input}",
+                                            oninput: move |e: FormEvent| target_calories_input.set(e.value()),
                                         }
                                     }
                                     div {
@@ -220,11 +411,13 @@ pub fn Home() -> Element {
                                             type: "button",
                                             onclick: move |_| is_target_calories_dialog_open.set(false),
                                             variant: ButtonVariant::Outline,
+                                            disabled: is_saving_target_calories(),
                                             "Annulla"
                                         }
                                         Button {
                                             type: "submit",
                                             variant: ButtonVariant::Primary,
+                                            disabled: is_saving_target_calories(),
                                             "Salva"
                                         }
                                     }
@@ -239,7 +432,7 @@ pub fn Home() -> Element {
                         div {
                             p {
                                 class: "font-heading text-2xl mb-1",
-                                "12"
+                                "{user.streak}"
                             }
                             p {
                                 class: "text-xs text-primary-light",
@@ -293,49 +486,51 @@ pub fn Home() -> Element {
                     }
                 }
             }
-            Card {
-                p {
-                    class: "text-accent text-xs font-semibold",
-                    "OBIETTIVO PESO"
-                }
-                p {
-                    class: "font-heading text-xl mb-3",
-                    span {
-                        class: "flex items-center gap-1",
-                        "{starting_kg} kg"
-                        ArrowRight {}
-                        "{target_kg} kg"
-                    }
-                }
-                div {
-                    class: "relative w-full flex items-center",
+            if let Some((starting_kg, current_kg, target_kg, percent)) = weight_progress {
+                Card {
                     p {
-                        class: "absolute text-background font-heading z-10 -translate-x-full pr-3",
-                        left: "{percent:.1}%",
-                        "{percent:.1} %"
+                        class: "text-accent text-xs font-semibold",
+                        "OBIETTIVO PESO"
                     }
-                    div {
-                        class: "w-full",
-                        Progress {
-                            value: percent,
-                            max: 100
+                    p {
+                        class: "font-heading text-xl mb-3",
+                        span {
+                            class: "flex items-center gap-1",
+                            "{starting_kg:.1} kg"
+                            ArrowRight {}
+                            "{target_kg:.1} kg"
                         }
                     }
-                }
-                div {
-                    class: "flex items-center justify-between mb-3",
-                    p {
-                        class: "text-xs text-primary-light",
-                        "Partenza: {starting_kg:.1} kg"
+                    div {
+                        class: "relative w-full flex items-center",
+                        p {
+                            class: "absolute text-background font-heading z-10 -translate-x-full pr-3",
+                            left: "{percent:.1}%",
+                            "{percent:.1} %"
+                        }
+                        div {
+                            class: "w-full",
+                            Progress {
+                                value: percent,
+                                max: 100
+                            }
+                        }
+                    }
+                    div {
+                        class: "flex items-center justify-between mb-3",
+                        p {
+                            class: "text-xs text-primary-light",
+                            "Partenza: {starting_kg:.1} kg"
+                        }
+                        p {
+                            class: "text-xs text-primary-light",
+                            "Obiettivo: {target_kg:.1} kg"
+                        }
                     }
                     p {
-                        class: "text-xs text-primary-light",
-                        "Obiettivo: {target_kg:.1} kg"
+                        class: "text-sm text-primary-light",
+                        "Mancano {(current_kg - target_kg).abs():.1} kg all'obiettivo"
                     }
-                }
-                p {
-                    class: "text-sm text-primary-light",
-                    "Mancano {(current_kg - target_kg).abs():.1} kg all'obiettivo"
                 }
             }
             Card {
@@ -354,11 +549,11 @@ pub fn Home() -> Element {
                 }
                 MonthlyChart {
                     series: vec![
-                        ChartSeries::new("Calorie assunte", " kcal", CALORIES.to_vec()),
-                        ChartSeries::new("Obiettivo calorie", " kcal", TARGET_CALORIES.to_vec())
+                        ChartSeries::new("Calorie assunte", " kcal", calories_series),
+                        ChartSeries::new("Obiettivo calorie", " kcal", target_calories_series)
                             .with_color("#6B665E")
                             .dashed(),
-                        ChartSeries::new("Peso", " kg", WEIGHT.to_vec()).with_decimals(1),
+                        ChartSeries::new("Peso", " kg", weight_series).with_decimals(1),
                     ],
                 }
             }
@@ -377,38 +572,43 @@ pub fn Home() -> Element {
                 }
             }
             Card {
-                // TODO: Iterare su una mappa giorni -> entry
-                div {
-                    class: "space-y-4",
-                    DayBlock {
-                        date: now.date_naive(),
-                        ingested_calories: 1463,
-                        target_calories: 1800,
-                        EntryRow {
-                            name: "Saikebon Manzo (Yakisoba)",
-                            calories: 413,
-                        }
-                        EntryRow {
-                            name: "Pizza",
-                            calories: 1050,
-                            notes: "Pranzo ufficio"
-                        }
+                if home_data.days.is_empty() {
+                    p {
+                        class: "text-sm text-primary-light",
+                        "Nessun giorno registrato."
                     }
-                    Separator {
-                        // TODO: Renderizzare prima di tutti i day block tranne il primo
-                        class: "opacity-20"
-                    }
-                    DayBlock {
-                        date: now.date_naive() - Days::new(1),
-                        ingested_calories: 1490,
-                        target_calories: 1800,
-                        EntryRow {
-                            name: "Qualcos'altro",
-                            calories: 840,
-                        }
-                        EntryRow {
-                            name: "Un'altra cosa ancora",
-                            calories: 650,
+                } else {
+                    div {
+                        class: "space-y-4",
+                        for (index, day) in home_data.days.iter().enumerate() {
+                            Fragment {
+                                key: "{day.id}",
+                                if index > 0 {
+                                    Separator {
+                                        class: "opacity-20"
+                                    }
+                                }
+                                DayBlock {
+                                    date: day.date,
+                                    weight_kg: day.weight_kg,
+                                    ingested_calories: home_data
+                                        .entries
+                                        .iter()
+                                        .filter(|entry| entry.date == day.date)
+                                        .map(|entry| entry.calories)
+                                        .sum::<i32>(),
+                                    target_calories: day.target_calories,
+                                    notes: day.notes.clone(),
+                                    for entry in home_data.entries.iter().filter(|entry| entry.date == day.date) {
+                                        EntryRow {
+                                            key: "{entry.id}",
+                                            name: entry.name.clone(),
+                                            calories: entry.calories,
+                                            notes: entry.notes.clone().unwrap_or_default(),
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

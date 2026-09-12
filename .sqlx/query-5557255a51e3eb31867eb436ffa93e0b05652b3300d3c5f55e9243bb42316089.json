@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE refresh_tokens\n                 SET revoked_at = COALESCE(revoked_at, now())\n                 WHERE family_id = (\n                     SELECT family_id\n                     FROM refresh_tokens\n                     WHERE token_hash = $1\n                 )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5557255a51e3eb31867eb436ffa93e0b05652b3300d3c5f55e9243bb42316089"
+}

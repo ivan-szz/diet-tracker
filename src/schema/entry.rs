@@ -1,7 +1,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct EntrySchema {
     pub id: i32,
     pub date: NaiveDate,
@@ -13,7 +14,7 @@ pub struct EntrySchema {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct CreateEntrySchema {
     pub date: NaiveDate,
     pub user_name: String,
@@ -33,13 +34,15 @@ pub struct FindEntryByIdSchema {
     pub id: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UpdateEntryNotesSchema {
     pub id: i32,
+    pub user_name: String,
     pub notes: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct DeleteEntrySchema {
     pub id: i32,
+    pub user_name: String,
 }

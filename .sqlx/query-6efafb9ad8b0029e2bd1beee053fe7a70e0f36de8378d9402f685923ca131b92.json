@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM days\n             USING users\n             WHERE users.id = days.user_id\n               AND users.name = $1\n               AND days.date = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6efafb9ad8b0029e2bd1beee053fe7a70e0f36de8378d9402f685923ca131b92"
+}

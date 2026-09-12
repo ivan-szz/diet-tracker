@@ -1,7 +1,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct DaySchema {
     pub id: i32,
     pub date: NaiveDate,
@@ -13,7 +14,7 @@ pub struct DaySchema {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct CreateDaySchema {
     pub date: NaiveDate,
     pub user_name: String,
@@ -21,8 +22,9 @@ pub struct CreateDaySchema {
     #[validate(range(min = 0.0))]
     pub weight_kg: Option<f32>,
 
+    /// Defaults to the previous day's target when omitted.
     #[validate(range(min = 0))]
-    pub target_calories: i32,
+    pub target_calories: Option<i32>,
 
     pub notes: Option<String>,
 }
@@ -38,7 +40,7 @@ pub struct FindDayByUserSchema {
     pub date: NaiveDate,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct UpdateDayWeightSchema {
     pub user_name: String,
     pub date: NaiveDate,
@@ -47,7 +49,7 @@ pub struct UpdateDayWeightSchema {
     pub weight_kg: Option<f32>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Validate)]
 pub struct UpdateDayTargetCaloriesSchema {
     pub user_name: String,
     pub date: NaiveDate,
@@ -56,9 +58,15 @@ pub struct UpdateDayTargetCaloriesSchema {
     pub target_calories: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UpdateDayNotesSchema {
     pub user_name: String,
     pub date: NaiveDate,
     pub notes: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct DeleteDaySchema {
+    pub user_name: String,
+    pub date: NaiveDate,
 }

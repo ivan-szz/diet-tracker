@@ -3,8 +3,8 @@ use sqlx::PgPool;
 
 use crate::{
     schema::day::{
-        CreateDaySchema, FindDayByUserSchema, FindDaysByUserSchema, UpdateDayNotesSchema,
-        UpdateDayTargetCaloriesSchema, UpdateDayWeightSchema,
+        DaySchema, DeleteDaySchema, FindDayByUserSchema, FindDaysByUserSchema,
+        UpdateDayNotesSchema, UpdateDayTargetCaloriesSchema, UpdateDayWeightSchema,
     },
     server::error::ServerError,
 };
@@ -18,6 +18,29 @@ pub struct Day {
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+pub struct CreateDay {
+    pub date: NaiveDate,
+    pub user_name: String,
+    pub weight_kg: Option<f32>,
+    pub target_calories: i32,
+    pub notes: Option<String>,
+}
+
+impl From<Day> for DaySchema {
+    fn from(value: Day) -> Self {
+        DaySchema {
+            id: value.id,
+            date: value.date,
+            user_id: value.user_id,
+            weight_kg: value.weight_kg,
+            target_calories: value.target_calories,
+            notes: value.notes,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+        }
+    }
 }
 
 impl Day {
@@ -63,8 +86,30 @@ impl Day {
         Ok(day)
     }
 
-    pub async fn create(value: &CreateDaySchema, pool: &PgPool) -> Result<Self, ServerError> {
-        let CreateDaySchema {
+    pub async fn find_previous(
+        user_name: &str,
+        date: NaiveDate,
+        pool: &PgPool,
+    ) -> Result<Option<Self>, ServerError> {
+        let day = sqlx::query_as!(
+            Self,
+            "SELECT days.*
+             FROM days
+             INNER JOIN users ON users.id = days.user_id
+             WHERE users.name = $1 AND days.date < $2
+             ORDER BY days.date DESC
+             LIMIT 1",
+            user_name,
+            date,
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(day)
+    }
+
+    pub async fn create(value: &CreateDay, pool: &PgPool) -> Result<Self, ServerError> {
+        let CreateDay {
             date,
             user_name,
             weight_kg,
@@ -174,5 +219,23 @@ impl Day {
         .await?;
 
         Ok(day)
+    }
+
+    pub async fn delete(value: &DeleteDaySchema, pool: &PgPool) -> Result<(), ServerError> {
+        let DeleteDaySchema { user_name, date } = value;
+
+        sqlx::query!(
+            "DELETE FROM days
+             USING users
+             WHERE users.id = days.user_id
+               AND users.name = $1
+               AND days.date = $2",
+            user_name,
+            date,
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
     }
 }
