@@ -102,13 +102,15 @@ fn trailing_trend(
     (calories_series, target_series, weight_series)
 }
 
+fn target_calories_as_of(date: NaiveDate, days: &[DaySchema]) -> Option<i32> {
+    days.iter()
+        .find(|day| day.date <= date)
+        .map(|day| day.target_calories)
+}
+
 /// Calories eaten and calorie target for `date`, from one user's `days`/`entries`.
 fn day_progress(date: NaiveDate, days: &[DaySchema], entries: &[EntrySchema]) -> (i32, i32) {
-    let target_calories = days
-        .iter()
-        .find(|day| day.date == date)
-        .map(|day| day.target_calories)
-        .unwrap_or(0);
+    let target_calories = target_calories_as_of(date, days).unwrap_or(0);
 
     let calories = entries
         .iter()
@@ -289,9 +291,8 @@ pub fn Home() -> Element {
         return rsx! { div { class: "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto", } };
     };
 
-    let today_day = home_data.days.iter().find(|day| day.date == today);
-    let today_has_day = today_day.is_some();
-    let today_target_calories = today_day.map(|day| day.target_calories);
+    let today_has_day = home_data.days.iter().any(|day| day.date == today);
+    let today_target_calories = target_calories_as_of(today, &home_data.days);
     let today_target_calories_label = today_target_calories
         .map(|value| value.to_string())
         .unwrap_or_else(|| "–".to_string());

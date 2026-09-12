@@ -3,7 +3,7 @@
 [web.app]
 
 # HTML title tag content
-title = "diet-tracker-dioxus"
+title = "Diet Tracker"
 
 # include `assets` in web platform
 [web.resource]
