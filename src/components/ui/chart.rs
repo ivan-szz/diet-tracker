@@ -139,10 +139,13 @@ struct Line {
     points: Vec<(f64, f64)>,
 }
 
-/// One label of the left column: a value on one of the scales.
+/// One label of the left column: a value on one of the scales. `value` and
+/// `unit` are kept apart so the unit can be hidden on narrow screens without
+/// touching the number.
 #[derive(Clone)]
 struct AxisCell {
-    label: String,
+    value: String,
+    unit: String,
     color: String,
 }
 
@@ -342,18 +345,25 @@ pub fn Chart(props: ChartProps) -> Element {
                 div {
                     class: "relative",
                     div {
-                        class: "invisible flex items-baseline justify-end gap-2 text-[11px] whitespace-nowrap tabular-nums",
+                        class: "invisible flex flex-col items-end text-[11px] whitespace-nowrap tabular-nums md:flex-row md:items-baseline md:justify-end md:gap-2",
                         aria_hidden: "true",
                         for cell in axis_sizer.iter() {
-                            p { "{cell.label}" }
+                            p {
+                                "{cell.value}"
+                                span { class: "hidden md:inline", "{cell.unit}" }
+                            }
                         }
                     }
                     for row in axis_rows.iter() {
                         div {
-                            class: "absolute right-0 flex -translate-y-1/2 items-baseline justify-end gap-2 text-[11px] whitespace-nowrap tabular-nums",
+                            class: "absolute right-0 flex flex-col -translate-y-1/2 items-end text-[11px] whitespace-nowrap tabular-nums md:flex-row md:items-baseline md:justify-end md:gap-2",
                             top: "{row.y:.3}%",
                             for cell in row.cells.iter() {
-                                p { color: "{cell.color}", "{cell.label}" }
+                                p {
+                                    color: "{cell.color}",
+                                    "{cell.value}"
+                                    span { class: "hidden md:inline", "{cell.unit}" }
+                                }
                             }
                         }
                     }
@@ -463,7 +473,8 @@ impl Scale {
     fn cell(&self, row: usize) -> AxisCell {
         let value = self.hi - self.step * row as f64;
         AxisCell {
-            label: format_value(value, self.decimals, &self.unit),
+            value: format!("{:.*}", self.decimals, value),
+            unit: self.unit.clone(),
             color: self.color.clone(),
         }
     }
@@ -472,9 +483,10 @@ impl Scale {
     fn widest_cell(&self) -> AxisCell {
         (0..=AXIS_INTERVALS)
             .map(|row| self.cell(row))
-            .max_by_key(|cell| cell.label.chars().count())
+            .max_by_key(|cell| cell.value.chars().count())
             .unwrap_or_else(|| AxisCell {
-                label: self.unit.clone(),
+                value: String::new(),
+                unit: self.unit.clone(),
                 color: self.color.clone(),
             })
     }

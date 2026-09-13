@@ -7,7 +7,7 @@ pub fn Card(
 ) -> Element {
     rsx! {
         div {
-            class: "flex flex-col gap-2 rounded-4xl bg-background-dark p-7 font-sans text-base font-normal shadow-sm",
+            class: "flex flex-col gap-2 rounded-2xl md:rounded-4xl bg-background-dark p-5 md:p-7 font-sans text-base font-normal shadow-sm",
             "data-slot": "card",
             ..attributes,
             {children}

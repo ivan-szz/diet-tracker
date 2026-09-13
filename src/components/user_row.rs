@@ -49,11 +49,11 @@ pub fn UserRow(props: UserRowProps) -> Element {
             role: "button",
             tabindex: 0,
             "data-selected": props.selected,
-            class: "w-full flex justify-between items-center my-3 cursor-pointer rounded-3xl border border-transparent py-3 pl-10 pr-5 transition-colors data-[selected=true]:border-accent/50 data-[selected=true]:bg-white/50",
+            class: "w-full flex justify-between items-center my-3 cursor-pointer rounded-3xl border border-transparent py-3 pl-5 md:pl-10 pr-5 transition-colors data-[selected=true]:border-accent/50 data-[selected=true]:bg-white/50",
             div {
-                class: "flex items-center gap-3",
+                class: "flex items-center gap-2 md:gap-3",
                 p {
-                    class: "mr-4 text-primary-light",
+                    class: "mr-2 md:mr-4 text-primary-light",
                     "{props.index}"
                 }
                 span {

@@ -1,7 +1,7 @@
 use crate::api::{auth::logout, day, entry, users};
 use crate::components::monthly_chart::MonthlyChart;
 use crate::components::providers::auth::use_auth;
-use crate::components::ui::button::ButtonVariant;
+use crate::components::ui::button::{ButtonSize, ButtonVariant};
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::ui::input::Input;
 use crate::components::ui::label::Label;
@@ -24,9 +24,10 @@ use crate::{
 };
 use chrono::{Datelike, Days, Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{ArrowRight, LogOut, Plus};
+use dioxus_icons::lucide::{ArrowRight, LogOut, Pencil, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
+use dioxus_html::a::size;
 
 struct HomeData {
     community: Vec<CommunityMember>,
@@ -402,12 +403,12 @@ pub fn Home() -> Element {
                     "DIARIO ALIMENTARE · {month.full_name()} {year}"
                 }
                 div {
-                    class: "flex justify-between items-end",
+                    class: "flex flex-col gap-6 md:flex-row md:justify-between md:items-end",
                     div {
                         div {
                             class: "flex items-end gap-4 mb-3",
                             h1 {
-                                class: "font-heading text-5xl",
+                                class: "font-heading text-4xl md:text-5xl",
                                 "{user.name}"
                             }
                             Button {
@@ -424,7 +425,76 @@ pub fn Home() -> Element {
                         }
                     }
                     div {
-                        class: "flex gap-8 content-center",
+                        class: "md:hidden grid grid-cols-2 gap-y-4 rounded-4xl bg-background-dark p-6 shadow-sm",
+                        div {
+                            if let (Some(current_kg), Some(starting_kg)) = (current_kg, starting_kg) {
+                                p {
+                                    class: "font-heading text-2xl mb-1",
+                                    "{current_kg:.1} kg"
+                                }
+                                p {
+                                    class: "text-xs text-primary-light",
+                                    "{(current_kg - starting_kg):.1} kg da {starting_month.unwrap_or_default()}"
+                                }
+                            } else {
+                                p {
+                                    class: "font-heading text-2xl mb-1",
+                                    "—"
+                                }
+                                p {
+                                    class: "text-xs text-primary-light",
+                                    "Nessun peso registrato"
+                                }
+                            }
+                        }
+                        div {
+                            class: "text-right",
+                            p {
+                                class: "font-heading text-2xl mb-1",
+                                "{user.streak}"
+                            }
+                            p {
+                                class: "text-xs text-primary-light",
+                                "giorni di fila"
+                            }
+                        }
+                        div {
+                            class: "col-span-2",
+                            Separator {
+                                horizontal: true
+                            }
+                        }
+                        div {
+                            p {
+                                class: "font-heading text-2xl mb-1",
+                                "{today_calories} / {today_target_calories_label}"
+                            }
+                            p {
+                                class: "text-xs text-primary-light",
+                                "kcal oggi / obiettivo"
+                            }
+                        }
+                        div {
+                            class: "flex items-center justify-end",
+                            Button {
+                                type: "button",
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Sm,
+                                onclick: move |_| {
+                                    target_calories_input.set(
+                                        today_target_calories
+                                            .map(|value| value.to_string())
+                                            .unwrap_or_default(),
+                                    );
+                                    is_target_calories_dialog_open.set(true);
+                                },
+                                Pencil {}
+                                "Obiettivo"
+                            }
+                        }
+                    }
+                    div {
+                        class: "hidden md:flex md:gap-8 content-center",
                         div {
                             if let (Some(current_kg), Some(starting_kg)) = (current_kg, starting_kg) {
                                 p {
@@ -471,50 +541,6 @@ pub fn Home() -> Element {
                                 "kcal oggi / obiettivo"
                             }
                         }
-                        Dialog {
-                            open: is_target_calories_dialog_open(),
-                            on_open_change: move |v| is_target_calories_dialog_open.set(v),
-                            DialogTitle {
-                                "Aggiorna l'obiettivo calorico"
-                            }
-                            DialogDescription {
-                                form {
-                                    onsubmit: move |e| {
-                                        e.prevent_default();
-                                        handle_save_target_calories()
-                                    },
-                                    div {
-                                        class: "space-y-2 mb-6",
-                                        Label {
-                                            html_for: "target_calories",
-                                            "Nuovo obiettivo (kcal/giorno)"
-                                        }
-                                        Input {
-                                            id: "target_calories",
-                                            name: "target_calories",
-                                            value: "{target_calories_input}",
-                                            oninput: move |e: FormEvent| target_calories_input.set(e.value()),
-                                        }
-                                    }
-                                    div {
-                                        class: "flex justify-end items-center gap-4",
-                                        Button {
-                                            type: "button",
-                                            onclick: move |_| is_target_calories_dialog_open.set(false),
-                                            variant: ButtonVariant::Outline,
-                                            disabled: is_saving_target_calories(),
-                                            "Annulla"
-                                        }
-                                        Button {
-                                            type: "submit",
-                                            variant: ButtonVariant::Primary,
-                                            disabled: is_saving_target_calories(),
-                                            "Salva"
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         div {
                             Separator {
                                 horizontal: false
@@ -528,6 +554,50 @@ pub fn Home() -> Element {
                             p {
                                 class: "text-xs text-primary-light",
                                 "giorni di fila"
+                            }
+                        }
+                    }
+                    Dialog {
+                        open: is_target_calories_dialog_open(),
+                        on_open_change: move |v| is_target_calories_dialog_open.set(v),
+                        DialogTitle {
+                            "Aggiorna l'obiettivo calorico"
+                        }
+                        DialogDescription {
+                            form {
+                                onsubmit: move |e| {
+                                    e.prevent_default();
+                                    handle_save_target_calories()
+                                },
+                                div {
+                                    class: "space-y-2 mb-6",
+                                    Label {
+                                        html_for: "target_calories",
+                                        "Nuovo obiettivo (kcal/giorno)"
+                                    }
+                                    Input {
+                                        id: "target_calories",
+                                        name: "target_calories",
+                                        value: "{target_calories_input}",
+                                        oninput: move |e: FormEvent| target_calories_input.set(e.value()),
+                                    }
+                                }
+                                div {
+                                    class: "flex justify-end items-center gap-4",
+                                    Button {
+                                        type: "button",
+                                        onclick: move |_| is_target_calories_dialog_open.set(false),
+                                        variant: ButtonVariant::Outline,
+                                        disabled: is_saving_target_calories(),
+                                        "Annulla"
+                                    }
+                                    Button {
+                                        type: "submit",
+                                        variant: ButtonVariant::Primary,
+                                        disabled: is_saving_target_calories(),
+                                        "Salva"
+                                    }
+                                }
                             }
                         }
                     }
@@ -640,8 +710,8 @@ pub fn Home() -> Element {
                 }
                 MonthlyChart {
                     series: vec![
-                        ChartSeries::new("Calorie assunte", " kcal", calories_series),
-                        ChartSeries::new("Obiettivo calorie", " kcal", target_calories_series)
+                        ChartSeries::new("Kcal assunte", " kcal", calories_series),
+                        ChartSeries::new("Obiettivo kcal", " kcal", target_calories_series)
                             .with_color("#6B665E")
                             .dashed(),
                         ChartSeries::new("Peso", " kg", weight_series).with_decimals(1),
