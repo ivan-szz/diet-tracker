@@ -24,10 +24,10 @@ use crate::{
 };
 use chrono::{Datelike, Days, Local, NaiveDate};
 use dioxus::prelude::*;
+use dioxus_html::a::size;
 use dioxus_icons::lucide::{ArrowRight, LogOut, Pencil, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
-use dioxus_html::a::size;
 
 struct HomeData {
     community: Vec<CommunityMember>,
@@ -219,42 +219,41 @@ pub fn Home() -> Element {
                 // The signed-in user's own days/entries are already fetched
                 // above; everyone else's are public read data, fetched
                 // on-demand through the community-scoped endpoints.
-                let (calories, target_calories, member_weight_delta) = if member.id
-                    == current_user_id
-                {
-                    let (calories, target_calories) = day_progress(today, &days, &entries);
-                    (calories, target_calories, weight_delta(&days))
-                } else {
-                    let member_days = match day::list_for_user(member.name.clone()).await {
-                        Ok(days) => days,
-                        Err(error) => {
-                            toast_api.error(
-                                "Errore".to_string(),
-                                ToastOptions::new()
-                                    .description(error_message(&error))
-                                    .duration(Duration::from_secs(20)),
-                            );
-                            vec![]
-                        }
-                    };
+                let (calories, target_calories, member_weight_delta) =
+                    if member.id == current_user_id {
+                        let (calories, target_calories) = day_progress(today, &days, &entries);
+                        (calories, target_calories, weight_delta(&days))
+                    } else {
+                        let member_days = match day::list_for_user(member.name.clone()).await {
+                            Ok(days) => days,
+                            Err(error) => {
+                                toast_api.error(
+                                    "Errore".to_string(),
+                                    ToastOptions::new()
+                                        .description(error_message(&error))
+                                        .duration(Duration::from_secs(20)),
+                                );
+                                vec![]
+                            }
+                        };
 
-                    let member_entries = match entry::list_for_user(member.name.clone()).await {
-                        Ok(entries) => entries,
-                        Err(error) => {
-                            toast_api.error(
-                                "Errore".to_string(),
-                                ToastOptions::new()
-                                    .description(error_message(&error))
-                                    .duration(Duration::from_secs(20)),
-                            );
-                            vec![]
-                        }
-                    };
+                        let member_entries = match entry::list_for_user(member.name.clone()).await {
+                            Ok(entries) => entries,
+                            Err(error) => {
+                                toast_api.error(
+                                    "Errore".to_string(),
+                                    ToastOptions::new()
+                                        .description(error_message(&error))
+                                        .duration(Duration::from_secs(20)),
+                                );
+                                vec![]
+                            }
+                        };
 
-                    let (calories, target_calories) =
-                        day_progress(today, &member_days, &member_entries);
-                    (calories, target_calories, weight_delta(&member_days))
-                };
+                        let (calories, target_calories) =
+                            day_progress(today, &member_days, &member_entries);
+                        (calories, target_calories, weight_delta(&member_days))
+                    };
 
                 community.push(CommunityMember {
                     user: member,
@@ -425,71 +424,76 @@ pub fn Home() -> Element {
                         }
                     }
                     div {
-                        class: "md:hidden grid grid-cols-2 gap-y-4 rounded-4xl bg-background-dark p-6 shadow-sm",
-                        div {
-                            if let (Some(current_kg), Some(starting_kg)) = (current_kg, starting_kg) {
-                                p {
-                                    class: "font-heading text-2xl mb-1",
-                                    "{current_kg:.1} kg"
+                        class: "md:hidden",
+                        Card {
+                            div {
+                                class: "grid grid-cols-2 gap-y-4",
+                                div {
+                                    if let (Some(current_kg), Some(starting_kg)) = (current_kg, starting_kg) {
+                                        p {
+                                            class: "font-heading text-2xl mb-1",
+                                            "{current_kg:.1} kg"
+                                        }
+                                        p {
+                                            class: "text-xs text-primary-light",
+                                            "{(current_kg - starting_kg):.1} kg da {starting_month.unwrap_or_default()}"
+                                        }
+                                    } else {
+                                        p {
+                                            class: "font-heading text-2xl mb-1",
+                                            "—"
+                                        }
+                                        p {
+                                            class: "text-xs text-primary-light",
+                                            "Nessun peso registrato"
+                                        }
+                                    }
                                 }
-                                p {
-                                    class: "text-xs text-primary-light",
-                                    "{(current_kg - starting_kg):.1} kg da {starting_month.unwrap_or_default()}"
+                                div {
+                                    class: "text-right",
+                                    p {
+                                        class: "font-heading text-2xl mb-1",
+                                        "{user.streak}"
+                                    }
+                                    p {
+                                        class: "text-xs text-primary-light",
+                                        "giorni di fila"
+                                    }
                                 }
-                            } else {
-                                p {
-                                    class: "font-heading text-2xl mb-1",
-                                    "—"
+                                div {
+                                    class: "col-span-2",
+                                    Separator {
+                                        horizontal: true
+                                    }
                                 }
-                                p {
-                                    class: "text-xs text-primary-light",
-                                    "Nessun peso registrato"
+                                div {
+                                    p {
+                                        class: "font-heading text-2xl mb-1",
+                                        "{today_calories} / {today_target_calories_label}"
+                                    }
+                                    p {
+                                        class: "text-xs text-primary-light",
+                                        "kcal oggi / obiettivo"
+                                    }
                                 }
-                            }
-                        }
-                        div {
-                            class: "text-right",
-                            p {
-                                class: "font-heading text-2xl mb-1",
-                                "{user.streak}"
-                            }
-                            p {
-                                class: "text-xs text-primary-light",
-                                "giorni di fila"
-                            }
-                        }
-                        div {
-                            class: "col-span-2",
-                            Separator {
-                                horizontal: true
-                            }
-                        }
-                        div {
-                            p {
-                                class: "font-heading text-2xl mb-1",
-                                "{today_calories} / {today_target_calories_label}"
-                            }
-                            p {
-                                class: "text-xs text-primary-light",
-                                "kcal oggi / obiettivo"
-                            }
-                        }
-                        div {
-                            class: "flex items-center justify-end",
-                            Button {
-                                type: "button",
-                                variant: ButtonVariant::Outline,
-                                size: ButtonSize::Sm,
-                                onclick: move |_| {
-                                    target_calories_input.set(
-                                        today_target_calories
-                                            .map(|value| value.to_string())
-                                            .unwrap_or_default(),
-                                    );
-                                    is_target_calories_dialog_open.set(true);
-                                },
-                                Pencil {}
-                                "Obiettivo"
+                                div {
+                                    class: "flex items-center justify-end",
+                                    Button {
+                                        type: "button",
+                                        variant: ButtonVariant::Outline,
+                                        size: ButtonSize::Sm,
+                                        onclick: move |_| {
+                                            target_calories_input.set(
+                                                today_target_calories
+                                                    .map(|value| value.to_string())
+                                                    .unwrap_or_default(),
+                                            );
+                                            is_target_calories_dialog_open.set(true);
+                                        },
+                                        Pencil {}
+                                        "Obiettivo"
+                                    }
+                                }
                             }
                         }
                     }
