@@ -710,11 +710,13 @@ pub fn Home() -> Element {
                 }
                 MonthlyChart {
                     series: vec![
-                        ChartSeries::new("Kcal assunte", " kcal", calories_series),
+                        ChartSeries::new("Kcal assunte", " kcal", calories_series).with_floor(0.0),
                         ChartSeries::new("Obiettivo kcal", " kcal", target_calories_series)
                             .with_color("#6B665E")
                             .dashed(),
-                        ChartSeries::new("Peso", " kg", weight_series).with_decimals(1),
+                        ChartSeries::new("Peso", " kg", weight_series)
+                            .with_decimals(1)
+                            .with_floor(0.0),
                     ],
                 }
             }

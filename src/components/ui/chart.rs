@@ -53,6 +53,13 @@ pub struct ChartSeries {
 
     /// Draws the line dashed, for a reference such as a target.
     pub dashed: bool,
+
+    /// Never draws the axis below this value, even if there is a spare row to
+    /// fill. Set it on quantities that cannot go negative, such as calories or
+    /// a weight in kg, so a sparse trend does not borrow rows below zero just
+    /// to round the grid out to [`AXIS_INTERVALS`]. Only the first series of a
+    /// scale (the one that introduces its unit) is consulted.
+    pub floor: Option<f64>,
 }
 
 impl ChartSeries {
@@ -64,6 +71,7 @@ impl ChartSeries {
             color: None,
             decimals: None,
             dashed: false,
+            floor: None,
         }
     }
 
@@ -74,6 +82,11 @@ impl ChartSeries {
 
     pub fn with_decimals(mut self, decimals: usize) -> Self {
         self.decimals = Some(decimals);
+        self
+    }
+
+    pub fn with_floor(mut self, floor: f64) -> Self {
+        self.floor = Some(floor);
         self
     }
 
@@ -183,6 +196,10 @@ struct HoverPoint {
 #[component]
 pub fn Chart(props: ChartProps) -> Element {
     let mut hovered = use_signal(|| None::<usize>);
+    // Which legend entry is picked out, by its index in `lines`. Picking one
+    // dims every other line and legend entry instead of hiding them, so the
+    // chart's scale does not jump when a line is singled out.
+    let mut selected_line = use_signal(|| None::<usize>);
 
     let days = props.days.len();
     if days == 0 || props.series.is_empty() {
@@ -324,9 +341,15 @@ pub fn Chart(props: ChartProps) -> Element {
             if props.legend {
                 div {
                     class: "mb-5 flex flex-wrap items-center gap-x-5 gap-y-2",
-                    for line in lines.iter() {
+                    for (index, line) in lines.iter().enumerate() {
                         div {
-                            class: "flex items-center gap-2",
+                            class: "flex items-center gap-2 cursor-pointer transition-opacity duration-150",
+                            opacity: if selected_line().is_some_and(|selected| selected != index) { "0.4" },
+                            role: "button",
+                            onclick: move |_| {
+                                selected_line
+                                    .set(if selected_line() == Some(index) { None } else { Some(index) });
+                            },
                             span {
                                 class: "size-2.5 shrink-0 rounded-full",
                                 background_color: "{line.color}",
@@ -391,7 +414,7 @@ pub fn Chart(props: ChartProps) -> Element {
                         class: "pointer-events-none absolute inset-0 h-full w-full overflow-visible",
                         view_box: "0 0 100 100",
                         preserve_aspect_ratio: "none",
-                        for line in lines.iter() {
+                        for (index, line) in lines.iter().enumerate() {
                             path {
                                 d: "{line.path}",
                                 fill: "none",
@@ -400,6 +423,8 @@ pub fn Chart(props: ChartProps) -> Element {
                                 stroke_linecap: "round",
                                 stroke_linejoin: "round",
                                 stroke_dasharray: if line.dashed { "5 5" },
+                                opacity: if selected_line().is_some_and(|selected| selected != index) { "0.15" },
+                                class: "transition-opacity duration-150",
                                 "vector-effect": "non-scaling-stroke",
                             }
                         }
@@ -526,7 +551,7 @@ fn build_scales(series: &[ChartSeries]) -> Vec<Scale> {
             max += 0.5;
         }
 
-        let (lo, hi, step) = axis_range(min, max);
+        let (lo, hi, step) = axis_range(min, max, line.floor);
 
         scales.push(Scale {
             unit: line.unit.clone(),
@@ -555,15 +580,23 @@ fn scale_of<'a>(scales: &'a [Scale], unit: &str) -> &'a Scale {
 ///
 /// The step is the smallest round one the data fits in; the rows left over are
 /// handed to whichever side of the data has less room, which keeps the curves
-/// centred instead of pinned to an edge.
-fn axis_range(min: f64, max: f64) -> (f64, f64, f64) {
+/// centred instead of pinned to an edge. `floor`, when set, is never crossed:
+/// a side that would dip below it gives its spare rows to the other side
+/// instead, so the axis never opens up room for values that cannot occur.
+fn axis_range(min: f64, max: f64, floor: Option<f64>) -> (f64, f64, f64) {
     let step = round_step(min, max);
     let mut lowest = (min / step).floor();
     let mut highest = (max / step).ceil();
 
+    let floor_steps = floor.map(|floor| floor / step);
+    if let Some(floor_steps) = floor_steps {
+        lowest = lowest.max(floor_steps.ceil());
+    }
+
     let spare = AXIS_INTERVALS as f64 - (highest - lowest);
     for _ in 0..spare.max(0.0) as usize {
-        if min - lowest * step <= highest * step - max {
+        let can_lower = floor_steps.is_none_or(|floor_steps| lowest - 1.0 >= floor_steps);
+        if can_lower && min - lowest * step <= highest * step - max {
             lowest -= 1.0;
         } else {
             highest += 1.0;
