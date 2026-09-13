@@ -664,10 +664,18 @@ pub fn Home() -> Element {
                     }
                     div {
                         class: "relative w-full flex items-center",
-                        p {
-                            class: "absolute text-background font-heading z-10 -translate-x-full pr-3",
-                            left: "{percent:.1}%",
-                            "{percent:.1} %"
+                        if percent > 20.0 {
+                            p {
+                                class: "absolute text-background font-heading text-sm md:text-base z-10 -translate-x-full pr-1.5 md:pr-3",
+                                left: "{percent:.1}%",
+                                "{percent:.1} %"
+                            }
+                        }
+                        if percent <= 20.0 {
+                            p {
+                                class: "absolute text-primary font-heading z-10 left-1/2 -translate-x-1/2",
+                                "{percent:.1} %"
+                            }
                         }
                         div {
                             class: "w-full",
