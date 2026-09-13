@@ -70,7 +70,7 @@ pub fn UserRow(props: UserRowProps) -> Element {
                     }
                     p {
                         class: "text-xs text-primary-light",
-                        "{props.weight_delta} da {props.month} · {props.calories}/{props.target_calories} kcal oggi"
+                        "{props.weight_delta:.1} da {props.month} · {props.calories}/{props.target_calories} kcal oggi"
                     }
                 }
             }
