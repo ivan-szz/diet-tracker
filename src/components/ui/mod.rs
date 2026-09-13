@@ -5,11 +5,11 @@ pub mod button;
 pub mod card;
 pub mod chart;
 pub mod checkbox;
+pub mod confirm_dialog;
 pub mod dialog;
 pub mod input;
 pub mod label;
 pub mod progress;
 pub mod separator;
 pub mod switch;
-
 pub mod toast;

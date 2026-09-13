@@ -1,3 +1,4 @@
+use crate::utils::serde::{number_from_string, optional_number_from_string};
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -23,7 +24,8 @@ pub struct CreateDaySchema {
     pub weight_kg: Option<f32>,
 
     /// Defaults to the previous day's target when omitted.
-    #[validate(range(min = 0))]
+    #[serde(default, deserialize_with = "optional_number_from_string")]
+    #[validate(range(min = 0, message = "Le calorie non possono essere negative"))]
     pub target_calories: Option<i32>,
 
     pub notes: Option<String>,
@@ -54,7 +56,8 @@ pub struct UpdateDayTargetCaloriesSchema {
     pub user_name: String,
     pub date: NaiveDate,
 
-    #[validate(range(min = 0))]
+    #[serde(deserialize_with = "number_from_string")]
+    #[validate(range(min = 0, message = "Le calorie non possono essere negative"))]
     pub target_calories: i32,
 }
 

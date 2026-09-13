@@ -2,10 +2,12 @@ use crate::api::{auth::logout, day, entry, users};
 use crate::components::monthly_chart::MonthlyChart;
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::button::{ButtonSize, ButtonVariant};
+use crate::components::ui::confirm_dialog::ConfirmDialog;
 use crate::components::ui::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::ui::input::Input;
 use crate::components::ui::label::Label;
 use crate::schema::day::{CreateDaySchema, UpdateDayTargetCaloriesSchema};
+use crate::schema::entry::{CreateEntrySchema, DeleteEntrySchema};
 use crate::schema::{day::DaySchema, entry::EntrySchema, user::UserSchema};
 use crate::utils::error::error_message;
 use crate::{
@@ -24,10 +26,10 @@ use crate::{
 };
 use chrono::{Datelike, Days, Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_html::a::size;
 use dioxus_icons::lucide::{ArrowRight, LogOut, Pencil, Plus};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
+use validator::Validate;
 
 struct HomeData {
     community: Vec<CommunityMember>,
@@ -41,6 +43,7 @@ struct HomeData {
 struct CommunityMember {
     user: UserSchema,
     weight_delta: f32,
+    starting_month: Option<String>,
     calories: i32,
     target_calories: i32,
 }
@@ -122,8 +125,6 @@ fn day_progress(date: NaiveDate, days: &[DaySchema], entries: &[EntrySchema]) ->
     (calories, target_calories)
 }
 
-/// Weight change between the first and the latest recorded day, in kg. `days`
-/// is expected sorted newest first, matching what the days endpoints return.
 fn weight_delta(days: &[DaySchema]) -> f32 {
     let latest_kg = days.iter().find_map(|day| day.weight_kg);
     let first_kg = days.iter().rev().find_map(|day| day.weight_kg);
@@ -132,6 +133,17 @@ fn weight_delta(days: &[DaySchema]) -> f32 {
         (Some(latest_kg), Some(first_kg)) => latest_kg - first_kg,
         _ => 0.0,
     }
+}
+
+fn weight_starting_month(days: &[DaySchema]) -> Option<String> {
+    days.iter()
+        .rev()
+        .find_map(|day| day.weight_kg.map(|_| day.date))
+        .map(|date| {
+            Month::from_zero_based(date.month0())
+                .full_name()
+                .to_string()
+        })
 }
 
 #[component]
@@ -159,8 +171,11 @@ pub fn Home() -> Element {
     let today = now.date_naive();
 
     let mut is_target_calories_dialog_open = use_signal(|| false);
-    let mut target_calories_input = use_signal(String::new);
     let mut is_saving_target_calories = use_signal(|| false);
+    let mut pending_delete_entry_id = use_signal(|| None::<i32>);
+    let mut is_deleting_entry = use_signal(|| false);
+    let mut is_new_entry_dialog_open = use_signal(|| false);
+    let mut is_saving_new_entry = use_signal(|| false);
 
     let mut home_data_resource = use_resource(move || {
         let current_user_id = session.user.read().as_ref().map(|user| user.id);
@@ -219,10 +234,15 @@ pub fn Home() -> Element {
                 // The signed-in user's own days/entries are already fetched
                 // above; everyone else's are public read data, fetched
                 // on-demand through the community-scoped endpoints.
-                let (calories, target_calories, member_weight_delta) =
+                let (calories, target_calories, member_weight_delta, member_starting_month) =
                     if member.id == current_user_id {
                         let (calories, target_calories) = day_progress(today, &days, &entries);
-                        (calories, target_calories, weight_delta(&days))
+                        (
+                            calories,
+                            target_calories,
+                            weight_delta(&days),
+                            weight_starting_month(&days),
+                        )
                     } else {
                         let member_days = match day::list_for_user(member.name.clone()).await {
                             Ok(days) => days,
@@ -252,12 +272,18 @@ pub fn Home() -> Element {
 
                         let (calories, target_calories) =
                             day_progress(today, &member_days, &member_entries);
-                        (calories, target_calories, weight_delta(&member_days))
+                        (
+                            calories,
+                            target_calories,
+                            weight_delta(&member_days),
+                            weight_starting_month(&member_days),
+                        )
                     };
 
                 community.push(CommunityMember {
                     user: member,
                     weight_delta: member_weight_delta,
+                    starting_month: member_starting_month,
                     calories,
                     target_calories,
                 });
@@ -332,52 +358,98 @@ pub fn Home() -> Element {
     let (calories_series, target_calories_series, weight_series) =
         trailing_trend(&chart_dates, &home_data.days, &home_data.entries);
 
-    let user_name = user.name.clone();
-    let handle_save_target_calories = move || {
-        let user_name = user_name.clone();
-        async move {
-            let Ok(target_calories) = target_calories_input().trim().parse::<i32>() else {
+    let handle_save_target_calories = move |e: Event<FormData>| async move {
+        e.prevent_default();
+        let payload: CreateDaySchema = match e.data().parsed_values() {
+            Ok(v) => v,
+            Err(err) => {
                 toast_api.error(
                     "Errore".to_string(),
                     ToastOptions::new()
-                        .description("Inserisci un numero di calorie valido")
+                        .description(err.to_string())
                         .duration(Duration::from_secs(20)),
                 );
                 return;
+            }
+        };
+
+        if let Err(errors) = payload.validate() {
+            for (field, errs) in errors.field_errors() {
+                for err in errs {
+                    let msg = err
+                        .message
+                        .as_ref()
+                        .map(|m| m.to_string())
+                        .unwrap_or_else(|| format!("{}: {}", field, err.code));
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(msg)
+                            .duration(Duration::from_secs(20)),
+                    );
+                }
+            }
+            return;
+        }
+
+        is_saving_target_calories.set(true);
+
+        let result = if today_has_day {
+            day::update_target_calories(UpdateDayTargetCaloriesSchema {
+                user_name: payload.user_name,
+                date: payload.date,
+                target_calories: payload.target_calories.unwrap_or_default(),
+            })
+            .await
+            .map(|_| ())
+        } else {
+            day::create(payload).await.map(|_| ())
+        };
+
+        is_saving_target_calories.set(false);
+
+        match result {
+            Ok(()) => {
+                is_target_calories_dialog_open.set(false);
+                home_data_resource.restart();
+                toast_api.success(
+                    "Fatto".to_string(),
+                    ToastOptions::new()
+                        .description("Obiettivo calorico aggiornato")
+                        .duration(Duration::from_secs(20)),
+                );
+            }
+            Err(error) => {
+                toast_api.error(
+                    "Errore".to_string(),
+                    ToastOptions::new()
+                        .description(error_message(&error))
+                        .duration(Duration::from_secs(20)),
+                );
+            }
+        }
+    };
+
+    let user_name = user.name.clone();
+    let handle_delete_entry = move || {
+        let user_name = user_name.clone();
+        async move {
+            let Some(id) = pending_delete_entry_id() else {
+                return;
             };
 
-            is_saving_target_calories.set(true);
-
-            let result = if today_has_day {
-                day::update_target_calories(UpdateDayTargetCaloriesSchema {
-                    user_name,
-                    date: today,
-                    target_calories,
-                })
-                .await
-                .map(|_| ())
-            } else {
-                day::create(CreateDaySchema {
-                    date: today,
-                    user_name,
-                    weight_kg: None,
-                    target_calories: Some(target_calories),
-                    notes: None,
-                })
-                .await
-                .map(|_| ())
-            };
-
-            is_saving_target_calories.set(false);
+            is_deleting_entry.set(true);
+            let result = entry::delete(DeleteEntrySchema { id, user_name }).await;
+            is_deleting_entry.set(false);
 
             match result {
                 Ok(()) => {
-                    is_target_calories_dialog_open.set(false);
+                    pending_delete_entry_id.set(None);
                     home_data_resource.restart();
                     toast_api.success(
                         "Fatto".to_string(),
                         ToastOptions::new()
-                            .description("Obiettivo calorico aggiornato")
+                            .description("Voce eliminata")
                             .duration(Duration::from_secs(20)),
                     );
                 }
@@ -389,6 +461,71 @@ pub fn Home() -> Element {
                             .duration(Duration::from_secs(20)),
                     );
                 }
+            }
+        }
+    };
+
+    let handle_create_entry = move |e: Event<FormData>| async move {
+        e.prevent_default();
+        let mut payload: CreateEntrySchema = match e.data().parsed_values() {
+            Ok(v) => v,
+            Err(err) => {
+                toast_api.error(
+                    "Errore".to_string(),
+                    ToastOptions::new()
+                        .description(err.to_string())
+                        .duration(Duration::from_secs(20)),
+                );
+                return;
+            }
+        };
+        // An empty "Note" input round-trips as `Some("")`, not `None`.
+        payload.notes = payload
+            .notes
+            .map(|notes| notes.trim().to_string())
+            .filter(|notes| !notes.is_empty());
+
+        if let Err(errors) = payload.validate() {
+            for (field, errs) in errors.field_errors() {
+                for err in errs {
+                    let msg = err
+                        .message
+                        .as_ref()
+                        .map(|m| m.to_string())
+                        .unwrap_or_else(|| format!("{}: {}", field, err.code));
+                    toast_api.error(
+                        "Errore".to_string(),
+                        ToastOptions::new()
+                            .description(msg)
+                            .duration(Duration::from_secs(20)),
+                    );
+                }
+            }
+            return;
+        }
+
+        is_saving_new_entry.set(true);
+        let result = entry::create(payload).await;
+        is_saving_new_entry.set(false);
+
+        match result {
+            Ok(_) => {
+                is_new_entry_dialog_open.set(false);
+                home_data_resource.restart();
+                toast_api.success(
+                    "Fatto".to_string(),
+                    ToastOptions::new()
+                        .description("Voce aggiunta")
+                        .duration(Duration::from_secs(20)),
+                );
+            }
+            Err(error) => {
+                toast_api.error(
+                    "Errore".to_string(),
+                    ToastOptions::new()
+                        .description(error_message(&error))
+                        .duration(Duration::from_secs(20)),
+                );
             }
         }
     };
@@ -482,14 +619,7 @@ pub fn Home() -> Element {
                                         type: "button",
                                         variant: ButtonVariant::Outline,
                                         size: ButtonSize::Sm,
-                                        onclick: move |_| {
-                                            target_calories_input.set(
-                                                today_target_calories
-                                                    .map(|value| value.to_string())
-                                                    .unwrap_or_default(),
-                                            );
-                                            is_target_calories_dialog_open.set(true);
-                                        },
+                                        onclick: move |_| is_target_calories_dialog_open.set(true),
                                         Pencil {}
                                         "Obiettivo"
                                     }
@@ -528,14 +658,7 @@ pub fn Home() -> Element {
                         div {
                             class: "cursor-pointer",
                             role: "button",
-                            onclick: move |_| {
-                                target_calories_input.set(
-                                    today_target_calories
-                                        .map(|value| value.to_string())
-                                        .unwrap_or_default(),
-                                );
-                                is_target_calories_dialog_open.set(true);
-                            },
+                            onclick: move |_| is_target_calories_dialog_open.set(true),
                             p {
                                 class: "font-heading text-2xl mb-1",
                                 "{today_calories} / {today_target_calories_label}"
@@ -564,15 +687,15 @@ pub fn Home() -> Element {
                     Dialog {
                         open: is_target_calories_dialog_open(),
                         on_open_change: move |v| is_target_calories_dialog_open.set(v),
-                        DialogTitle {
-                            "Aggiorna l'obiettivo calorico"
-                        }
-                        DialogDescription {
+                        Fragment {
+                            key: "{is_target_calories_dialog_open()}",
+                            DialogTitle {
+                                "Aggiorna l'obiettivo calorico"
+                            }
                             form {
-                                onsubmit: move |e| {
-                                    e.prevent_default();
-                                    handle_save_target_calories()
-                                },
+                                onsubmit: move |e| handle_save_target_calories(e),
+                                input { r#type: "hidden", name: "user_name", value: "{user.name}" }
+                                input { r#type: "hidden", name: "date", value: "{today}" }
                                 div {
                                     class: "space-y-2 mb-6",
                                     Label {
@@ -582,8 +705,9 @@ pub fn Home() -> Element {
                                     Input {
                                         id: "target_calories",
                                         name: "target_calories",
-                                        value: "{target_calories_input}",
-                                        oninput: move |e: FormEvent| target_calories_input.set(e.value()),
+                                        type: "number",
+                                        min: "0",
+                                        value: today_target_calories.map(|value| value.to_string()).unwrap_or_default(),
                                     }
                                 }
                                 div {
@@ -640,7 +764,7 @@ pub fn Home() -> Element {
                                     index: index as i32 + 1,
                                     name: member.user.name.clone(),
                                     streak: member.user.streak,
-                                    month: month.full_name().to_string(),
+                                    month: member.starting_month.clone().unwrap_or_default(),
                                     weight_delta: member.weight_delta,
                                     calories: member.calories,
                                     target_calories: member.target_calories,
@@ -739,11 +863,82 @@ pub fn Home() -> Element {
                     "Diario alimentare"
                 }
                 Button {
+                    type: "button",
                     class: "font-heading text-xl",
+                    onclick: move |_| is_new_entry_dialog_open.set(true),
                     Plus {
                         size: "2em"
                     }
                     "Nuova voce"
+                }
+                Dialog {
+                    open: is_new_entry_dialog_open(),
+                    on_open_change: move |v| is_new_entry_dialog_open.set(v),
+                    Fragment {
+                        key: "{is_new_entry_dialog_open()}",
+                        DialogTitle {
+                            "Aggiungi una voce"
+                        }
+                        DialogDescription {
+                            "Registra un alimento nel diario di oggi."
+                        }
+                        form {
+                            onsubmit: move |e| handle_create_entry(e),
+                            input { r#type: "hidden", name: "user_name", value: "{user.name}" }
+                            input { r#type: "hidden", name: "date", value: "{today}" }
+                            div {
+                                class: "space-y-2 mb-4",
+                                Label {
+                                    html_for: "entry_name",
+                                    "Cosa hai mangiato?"
+                                }
+                                Input {
+                                    id: "entry_name",
+                                    name: "name",
+                                }
+                            }
+                            div {
+                                class: "space-y-2 mb-4",
+                                Label {
+                                    html_for: "entry_calories",
+                                    "Calorie (kcal)"
+                                }
+                                Input {
+                                    id: "entry_calories",
+                                    name: "calories",
+                                    type: "number",
+                                    min: "0",
+                                }
+                            }
+                            div {
+                                class: "space-y-2 mb-6",
+                                Label {
+                                    html_for: "entry_notes",
+                                    "Note (opzionale)"
+                                }
+                                Input {
+                                    id: "entry_notes",
+                                    name: "notes",
+                                }
+                            }
+                            div {
+                                class: "flex justify-end items-center gap-4",
+                                Button {
+                                    type: "button",
+                                    onclick: move |_| is_new_entry_dialog_open.set(false),
+                                    variant: ButtonVariant::Outline,
+                                    disabled: is_saving_new_entry(),
+                                    "Annulla"
+                                }
+                                Button {
+                                    type: "submit",
+                                    variant: ButtonVariant::Primary,
+                                    disabled: is_saving_new_entry(),
+                                    "Salva"
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Card {
@@ -780,6 +975,10 @@ pub fn Home() -> Element {
                                             name: entry.name.clone(),
                                             calories: entry.calories,
                                             notes: entry.notes.clone().unwrap_or_default(),
+                                            on_delete: {
+                                                let id = entry.id;
+                                                move |_| pending_delete_entry_id.set(Some(id))
+                                            },
                                         }
                                     }
                                 }
@@ -787,6 +986,18 @@ pub fn Home() -> Element {
                         }
                     }
                 }
+            }
+            ConfirmDialog {
+                open: pending_delete_entry_id().is_some(),
+                on_open_change: move |open: bool| {
+                    if !open {
+                        pending_delete_entry_id.set(None);
+                    }
+                },
+                title: "Eliminare questa voce?",
+                description: "L'operazione non può essere annullata.",
+                loading: is_deleting_entry(),
+                on_confirm: move |_| handle_delete_entry(),
             }
         }
     }

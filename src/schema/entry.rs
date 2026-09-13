@@ -1,3 +1,4 @@
+use crate::utils::serde::number_from_string;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -18,8 +19,10 @@ pub struct EntrySchema {
 pub struct CreateEntrySchema {
     pub date: NaiveDate,
     pub user_name: String,
+    #[validate(length(min = 1, message = "Inserisci un nome per la voce"))]
     pub name: String,
-    #[validate(range(min = 0))]
+    #[serde(deserialize_with = "number_from_string")]
+    #[validate(range(min = 0, message = "Le calorie non possono essere negative"))]
     pub calories: i32,
     pub notes: Option<String>,
 }

@@ -13,6 +13,8 @@ pub struct EntryRowProps {
 
     #[props(default)]
     pub notes: String,
+
+    pub on_delete: EventHandler<()>,
 }
 
 #[component]
@@ -35,7 +37,9 @@ pub fn EntryRow(props: EntryRowProps) -> Element {
                         "{props.calories}"
                     }
                     Button {
+                        type: "button",
                         variant: ButtonVariant::Ghost,
+                        onclick: move |_| props.on_delete.call(()),
                         X {
                             size: "1.25em"
                         }
