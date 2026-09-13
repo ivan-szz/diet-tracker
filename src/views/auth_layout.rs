@@ -23,20 +23,25 @@ pub fn AuthLayout() -> Element {
 
     rsx! {
         div {
-            class: "w-full h-screen flex",
+            class: "w-full min-h-screen flex flex-col md:h-screen md:flex-row",
             div {
                 class: "w-full bg-secondary flex flex-col justify-center gap-8 p-10 text-background relative overflow-hidden",
                 div {
-                    class: "w-full flex flex-col justify-center gap-8 relative z-10 max-w-md",
+                    class: "w-full flex flex-col justify-center gap-8 relative z-10 mx-auto md:mx-0 max-w-md",
                     h2 {
-                        class: "font-heading text-5xl",
-                        "Monitora la dieta"
-                        br {}
-                        "insieme al tuo"
-                        br {}
+                        class: "font-heading text-3xl md:text-5xl",
+                        "Monitora la dieta "
+                        br {
+                            class: "hidden md:block"
+                        }
+                        "insieme al tuo "
+                        br {
+                            class: "hidden md:block"
+                        }
                         "gruppo"
                     }
                     p {
+                        class: "hidden md:block",
                         "Diario alimentare, obiettivi di peso e classifica dei progressi, condivisi con le persone che ti tengono motivato."
                     }
                 }
