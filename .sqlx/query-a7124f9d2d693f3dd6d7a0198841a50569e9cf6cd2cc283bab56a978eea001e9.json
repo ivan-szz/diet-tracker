@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO days (user_id, date, weight_kg, target_calories, notes)\n             VALUES ((SELECT id FROM users WHERE name = $1), $2, $3, $4, $5)\n             RETURNING *",
+  "query": "UPDATE days\n             SET weight_kg = $1,\n                 weight_logged_at = CASE\n                     WHEN $1::real IS NULL THEN NULL\n                     ELSE COALESCE(days.weight_logged_at, now())\n                 END\n             FROM users\n             WHERE users.id = days.user_id\n               AND users.name = $2\n               AND days.date = $3\n             RETURNING days.*",
   "describe": {
     "columns": [
       {
@@ -90,15 +90,24 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "weight_logged_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "days",
+            "name": "weight_logged_at"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Date",
         "Float4",
-        "Int4",
-        "Text"
+        "Text",
+        "Date"
       ]
     },
     "nullable": [
@@ -109,8 +118,9 @@
       false,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "5904ec25ac6fcb3c4a64ebdfc422af0193ae1f62c4dbf96cc66d5786292a1805"
+  "hash": "a7124f9d2d693f3dd6d7a0198841a50569e9cf6cd2cc283bab56a978eea001e9"
 }

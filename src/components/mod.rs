@@ -11,6 +11,9 @@ pub use entry_row::EntryRow;
 mod day_block;
 pub use day_block::DayBlock;
 
+mod streak_indicator;
+pub use streak_indicator::StreakIndicator;
+
 pub mod home;
 pub mod monthly_chart;
 pub mod providers;

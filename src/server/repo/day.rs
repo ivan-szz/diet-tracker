@@ -18,6 +18,15 @@ pub struct Day {
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub weight_logged_at: Option<DateTime<Utc>>,
+}
+
+/// A day with a weight or at least one entry, and when the first of them was
+/// logged.
+pub struct TrackedDay {
+    pub user_id: i32,
+    pub date: NaiveDate,
+    pub tracked_at: DateTime<Utc>,
 }
 
 pub struct CreateDay {
@@ -137,6 +146,30 @@ impl Day {
         Ok(day)
     }
 
+    /// `user_id` narrows the result to one user; `None` returns everyone's.
+    pub async fn find_tracked(
+        user_id: Option<i32>,
+        pool: &PgPool,
+    ) -> Result<Vec<TrackedDay>, ServerError> {
+        let days = sqlx::query_as!(
+            TrackedDay,
+            r#"SELECT days.user_id,
+                      days.date,
+                      LEAST(days.weight_logged_at, MIN(entries.created_at)) AS "tracked_at!"
+               FROM days
+               LEFT JOIN entries
+                   ON entries.user_id = days.user_id AND entries.date = days.date
+               WHERE $1::int IS NULL OR days.user_id = $1
+               GROUP BY days.id
+               HAVING LEAST(days.weight_logged_at, MIN(entries.created_at)) IS NOT NULL"#,
+            user_id,
+        )
+        .fetch_all(pool)
+        .await?;
+
+        Ok(days)
+    }
+
     pub async fn create(value: &CreateDay, pool: &PgPool) -> Result<Self, ServerError> {
         let CreateDay {
             date,
@@ -148,8 +181,11 @@ impl Day {
 
         let day = sqlx::query_as!(
             Self,
-            "INSERT INTO days (user_id, date, weight_kg, target_calories, notes)
-             VALUES ((SELECT id FROM users WHERE name = $1), $2, $3, $4, $5)
+            "INSERT INTO days (user_id, date, weight_kg, target_calories, notes, weight_logged_at)
+             VALUES (
+                 (SELECT id FROM users WHERE name = $1), $2, $3, $4, $5,
+                 CASE WHEN $3::real IS NULL THEN NULL ELSE now() END
+             )
              RETURNING *",
             user_name,
             date,
@@ -176,7 +212,11 @@ impl Day {
         let day = sqlx::query_as!(
             Self,
             "UPDATE days
-             SET weight_kg = $1
+             SET weight_kg = $1,
+                 weight_logged_at = CASE
+                     WHEN $1::real IS NULL THEN NULL
+                     ELSE COALESCE(days.weight_logged_at, now())
+                 END
              FROM users
              WHERE users.id = days.user_id
                AND users.name = $2

@@ -88,18 +88,35 @@ curl -b jar.txt https://diet.example.com/api/stats/summary
   first day needs an explicit `target_calories`.
 - A day is **within** its target when the calories eaten are at most the
   target, **over** otherwise.
+- The **streak** is computed by the server and can't be set. A date counts once
+  it holds a weight or at least one entry (a day with only the calorie target
+  doesn't), logged by the end of the second day after that date: Monday can
+  still be filled in on Wednesday, not on Thursday. What matters is when the
+  first weight or entry was logged: filling a date in later is fine for the
+  diary but never counts, and neither does removing the weight and setting it
+  again, or deleting the day and recreating it, after the deadline.
+  - `streak` is the number of consecutive counted dates ending at the most
+    recent one. A missing date that can no longer be filled in ends the run
+    for good: `streak` restarts from the dates after it, or is `0` if there are
+    none.
+  - `streak_at_risk` is `true` while a missing date in the last two days can
+    still be filled in and would join the run before it. Until it is filled
+    in, `streak` counts only the most recent run: the one before the gap if
+    nothing has been logged after it, otherwise the dates after the gap.
+  - Streaks always follow the server's clock; the `date` parameter doesn't
+    affect them.
 
 ### Reading
 
 | Endpoint | Returns | Query parameters |
 |---|---|---|
-| `GET /api/stats/summary` | Calories eaten and target for a date, weight progress (current, starting, delta, progress towards the goal weight), number of days recorded | `user_name`, `date` |
+| `GET /api/stats/summary` | The user (with `streak` and `streak_at_risk`), calories eaten and target for a date, weight progress (current, starting, delta, progress towards the goal weight), number of days recorded | `user_name`, `date` |
 | `GET /api/stats/community` | The same summary for every user | `date` |
 | `GET /api/stats/trend` | One point per date: calories, target and weight (the last two carried over from earlier days). At most one year | `user_name`, `from` (default: 29 days before `to`), `to` (default: today) |
 | `GET /api/diary` | Days, newest first, each with its entries and calorie total | `user_name`, `from`, `to`, `outcome` (`within` \| `over`), `q` |
 | `GET /api/days` | Days, newest first | `user_name`, `from`, `to`, `outcome`, `q` |
 | `GET /api/entries` | Entries, newest first | `user_name`, `from`, `to`, `q` |
-| `GET /api/users` | All users, with streak and goal weight | none |
+| `GET /api/users` | All users, with goal weight, `streak` and `streak_at_risk` | none |
 
 `from` and `to` are inclusive. `q` is a case-insensitive search in entry names
 and notes. On `/api/diary` and `/api/days` it keeps the days with at least one
@@ -119,7 +136,6 @@ entries, not just the matching ones.
 | `POST /api/days/notes` | `user_name`, `date`, `notes?` |
 | `POST /api/days/delete` | `user_name`, `date` |
 | `POST /api/users/target-weight` | `name`, `target_weight_kg` |
-| `POST /api/users/streak` | `name`, `streak` |
 
 The `/api/days/*` updates need the day to exist: create it with `POST /api/days`
 first, or by adding an entry on that date.
@@ -137,3 +153,6 @@ first, or by adding an entry on that date.
   `GET /api/stats/trend?user_name=Marco&from=…&to=…`, or
   `GET /api/diary?user_name=Marco&from=…` for what he actually ate.
 - **"Who's keeping up best?"** → `GET /api/stats/community?date=…`.
+- **"Is my streak safe?"** → `GET /api/auth/me`: if `streak_at_risk` is `true`,
+  remind the user to fill in the day they missed: it still counts until the end
+  of the second day after it.

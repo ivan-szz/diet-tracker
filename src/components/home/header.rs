@@ -2,6 +2,7 @@ use super::dates::month_name;
 use super::target_calories_dialog::TargetCaloriesDialog;
 use crate::api::auth::logout;
 use crate::components::providers::auth::use_auth;
+use crate::components::StreakIndicator;
 use crate::components::ui::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::ui::card::Card;
 use crate::components::ui::separator::Separator;
@@ -62,8 +63,18 @@ pub fn HomeHeader(
         _ => ("—".to_string(), "Nessun peso registrato".to_string()),
     };
 
-    let streak_value = user.streak.to_string();
-    let streak_caption = "giorni di fila".to_string();
+    let streak = user.streak;
+    let streak_at_risk = user.streak_at_risk;
+    use_hook(|| {
+        if is_me && streak_at_risk {
+            toast_api.warning(
+                "Serie in sospeso".to_string(),
+                ToastOptions::new()
+                    .description("Un giorno recente non è ancora segnato: puoi recuperarlo fino a due giorni dopo la sua data")
+                    .duration(Duration::from_secs(20)),
+            );
+        }
+    });
 
     rsx! {
         div {
@@ -115,7 +126,7 @@ pub fn HomeHeader(
                             }
                             div {
                                 class: "text-right",
-                                Stat { value: streak_value.clone(), caption: streak_caption.clone() }
+                                StreakStat { streak, at_risk: streak_at_risk }
                             }
                             div {
                                 class: "col-span-2",
@@ -170,7 +181,7 @@ pub fn HomeHeader(
                         }
                     }
                     div {
-                        Stat { value: streak_value, caption: streak_caption }
+                        StreakStat { streak, at_risk: streak_at_risk }
                     }
                 }
                 if is_me {
@@ -198,6 +209,20 @@ fn Stat(value: String, caption: String) -> Element {
         p {
             class: "text-xs text-primary-light",
             "{caption}"
+        }
+    }
+}
+
+#[component]
+fn StreakStat(streak: i32, at_risk: bool) -> Element {
+    rsx! {
+        p {
+            class: "font-heading text-2xl mb-1",
+            StreakIndicator { streak, at_risk }
+        }
+        p {
+            class: "text-xs text-primary-light",
+            if at_risk { "serie in sospeso" } else { "giorni di fila" }
         }
     }
 }

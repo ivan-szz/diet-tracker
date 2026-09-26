@@ -7,7 +7,6 @@ use crate::schema::user::UserSchema;
 use crate::server::error::ServerError;
 use crate::server::repo::day::Day;
 use crate::server::repo::entry::Entry;
-use crate::server::repo::user::User;
 use crate::server::services::users;
 use chrono::{Days, NaiveDate};
 use sqlx::PgPool;
@@ -29,11 +28,11 @@ pub async fn community(
     date: NaiveDate,
     pool: &PgPool,
 ) -> Result<Vec<UserSummarySchema>, ServerError> {
-    let users = User::find_all(pool).await?;
+    let users = users::list(pool).await?;
 
     let mut summaries = Vec::with_capacity(users.len());
     for user in users {
-        summaries.push(summarize(user.into(), date, pool).await?);
+        summaries.push(summarize(user, date, pool).await?);
     }
 
     Ok(summaries)

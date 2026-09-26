@@ -1,4 +1,4 @@
-use crate::schema::user::{UpdateUserStreakSchema, UpdateUserTargetWeightSchema, UserSchema};
+use crate::schema::user::{UpdateUserTargetWeightSchema, UserSchema};
 use dioxus::prelude::*;
 #[cfg(feature = "server")]
 use validator::Validate;
@@ -32,13 +32,4 @@ pub async fn update_target_weight(
     ensure_owner(&payload.name, &current_user)?;
 
     Ok(users::update_target_weight(&payload, &pool).await?)
-}
-
-#[post("/api/users/streak", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
-pub async fn update_streak(payload: UpdateUserStreakSchema) -> ServerFnResult<UserSchema> {
-    payload.validate().map_err(ServerError::from)?;
-    let current_user = current_user_from_cookie(&cookie, &pool).await?;
-    ensure_owner(&payload.name, &current_user)?;
-
-    Ok(users::update_streak(&payload, &pool).await?)
 }

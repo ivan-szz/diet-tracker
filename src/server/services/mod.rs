@@ -3,6 +3,7 @@ pub mod day;
 pub mod diary;
 pub mod entry;
 pub mod stats;
+pub mod streak;
 pub mod users;
 
 /// A blank search string means "no search", not "match an empty string".

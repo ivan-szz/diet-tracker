@@ -3,7 +3,7 @@ use crate::schema::user::{LoginUserSchema, RegisterUserSchema, UserSchema};
 #[cfg(feature = "server")]
 use crate::server::error::ServerError;
 #[cfg(feature = "server")]
-use crate::server::services::auth;
+use crate::server::services::{auth, users};
 #[cfg(feature = "server")]
 use crate::server::session::{
     current_user_from_cookie, refresh_cookie_attrs, session_cookie_attrs,
@@ -48,7 +48,7 @@ pub async fn logout() -> ServerFnResult<AuthCookieHeaders> {
 pub async fn me() -> ServerFnResult<UserSchema> {
     let user = current_user_from_cookie(&cookie, &pool).await?;
 
-    Ok(user)
+    Ok(users::with_streak(user, &pool).await?)
 }
 
 #[post("/api/auth/refresh", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]

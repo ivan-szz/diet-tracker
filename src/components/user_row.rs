@@ -1,5 +1,5 @@
+use crate::components::StreakIndicator;
 use dioxus::prelude::*;
-use dioxus_icons::lucide::Flame;
 
 const AVATAR_COLORS: [&str; 8] = [
     "#56633F", "#8A472B", "#38616B", "#68496F", "#70551F", "#356052", "#70404A", "#46567A",
@@ -10,6 +10,7 @@ pub struct UserRowProps {
     index: i32,
     name: String,
     streak: i32,
+    streak_at_risk: bool,
     weight_delta: f32,
 
     // TODO: Estrapolare un tipo per i mesi
@@ -88,17 +89,11 @@ pub fn UserRow(props: UserRowProps) -> Element {
                     }
                 }
             }
-            div {
-                class: "flex items-center gap-1.5",
-                Flame {
-                    size: "1.25em",
-                    color: "var(--color-accent)",
-                    stroke_width: 3
-                }
-                p {
-                    class: "font-semibold",
-                    "{props.streak}"
-                }
+            StreakIndicator {
+                class: "font-semibold",
+                icon_size: "1.25em",
+                streak: props.streak,
+                at_risk: props.streak_at_risk,
             }
         }
     }

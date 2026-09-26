@@ -38,17 +38,6 @@
       },
       {
         "ordinal": 3,
-        "name": "streak",
-        "type_info": "Int4",
-        "origin": {
-          "Table": {
-            "table": "users",
-            "name": "streak"
-          }
-        }
-      },
-      {
-        "ordinal": 4,
         "name": "target_weight_kg",
         "type_info": "Float4",
         "origin": {
@@ -59,7 +48,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +59,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -87,7 +76,6 @@
       ]
     },
     "nullable": [
-      false,
       false,
       false,
       false,

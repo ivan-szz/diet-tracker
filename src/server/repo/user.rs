@@ -3,12 +3,12 @@ use sqlx::PgPool;
 
 use crate::schema::user::UserSchema;
 use crate::server::error::ServerError;
+use crate::server::services::streak::Streak;
 
 pub struct User {
     pub id: i32,
     pub name: String,
     pub password_hash: String,
-    pub streak: i32,
     pub target_weight_kg: Option<f32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -24,25 +24,19 @@ pub struct UpdateTargetWeight {
     pub target_weight_kg: f32,
 }
 
-pub struct UpdateStreak {
-    pub name: String,
-    pub streak: i32,
-}
-
-impl From<User> for UserSchema {
-    fn from(value: User) -> Self {
+impl User {
+    pub fn into_schema(self, streak: Streak) -> UserSchema {
         UserSchema {
-            id: value.id,
-            name: value.name,
-            streak: value.streak,
-            target_weight_kg: value.target_weight_kg,
-            created_at: value.created_at,
-            updated_at: value.updated_at,
+            id: self.id,
+            name: self.name,
+            streak: streak.days,
+            streak_at_risk: streak.at_risk,
+            target_weight_kg: self.target_weight_kg,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
         }
     }
-}
 
-impl User {
     pub async fn find_all(pool: &PgPool) -> Result<Vec<Self>, ServerError> {
         let users = sqlx::query_as!(Self, "SELECT * FROM users")
             .fetch_all(pool)
@@ -90,21 +84,6 @@ impl User {
             Self,
             "UPDATE users SET target_weight_kg = $1 WHERE name = $2 RETURNING *",
             target_weight_kg,
-            name
-        )
-        .fetch_one(pool)
-        .await?;
-
-        Ok(user)
-    }
-
-    pub async fn update_streak(value: &UpdateStreak, pool: &PgPool) -> Result<Self, ServerError> {
-        let UpdateStreak { name, streak } = value;
-
-        let user = sqlx::query_as!(
-            Self,
-            "UPDATE users SET streak = $1 WHERE name = $2 RETURNING *",
-            streak,
             name
         )
         .fetch_one(pool)

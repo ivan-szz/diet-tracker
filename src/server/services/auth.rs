@@ -1,5 +1,4 @@
 use crate::schema::auth::AuthTokensSchema;
-use crate::schema::user::UserSchema;
 use crate::schema::user::{LoginUserSchema, RegisterUserSchema};
 use crate::server::error::ServerError;
 use crate::server::repo::refresh_token::{CreateRefreshToken, RefreshToken};
@@ -16,15 +15,10 @@ use sqlx::PgPool;
 
 const REFRESH_TOKEN_TTL: Duration = Duration::days(7);
 
-pub async fn get_authenticated_user(
-    claims: &Claims,
-    pool: &PgPool,
-) -> Result<UserSchema, ServerError> {
-    let Some(user) = User::find_by_name(&claims.sub, pool).await? else {
-        return Err(ServerError::Unauthorized);
-    };
-
-    Ok(user.into())
+pub async fn get_authenticated_user(claims: &Claims, pool: &PgPool) -> Result<User, ServerError> {
+    User::find_by_name(&claims.sub, pool)
+        .await?
+        .ok_or(ServerError::Unauthorized)
 }
 
 pub async fn login(

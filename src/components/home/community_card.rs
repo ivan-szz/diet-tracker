@@ -48,6 +48,7 @@ pub fn CommunityCard(
                                 index: index as i32 + 1,
                                 name: member.user.name.clone(),
                                 streak: member.user.streak,
+                                streak_at_risk: member.user.streak_at_risk,
                                 month: member.weight.starting_date.map(month_name).unwrap_or_default().to_string(),
                                 weight_delta: member.weight.delta_kg,
                                 calories: member.day.calories,

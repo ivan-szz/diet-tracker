@@ -90,6 +90,17 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "weight_logged_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "days",
+            "name": "weight_logged_at"
+          }
+        }
       }
     ],
     "parameters": {
@@ -109,7 +120,8 @@
       false,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "716bb23a2f5860a1cf6c961134f448139e33c31e6b8d17d6ae6813b3d0087901"
