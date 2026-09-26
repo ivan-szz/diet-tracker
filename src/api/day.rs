@@ -1,5 +1,5 @@
 use crate::schema::day::{
-    CreateDaySchema, DaySchema, DeleteDaySchema, UpdateDayNotesSchema,
+    CreateDaySchema, DayQuerySchema, DaySchema, DeleteDaySchema, UpdateDayNotesSchema,
     UpdateDayTargetCaloriesSchema, UpdateDayWeightSchema,
 };
 use dioxus::prelude::*;
@@ -19,20 +19,15 @@ use dioxus::server::axum::Extension;
 #[cfg(feature = "server")]
 use sqlx::PgPool;
 
-#[get("/api/days", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
-pub async fn list() -> ServerFnResult<Vec<DaySchema>> {
+/// Returns a user's days, newest first, narrowed by the optional filters in
+/// [`DayQuerySchema`]. Day history is public read data for every authenticated
+/// user, not just its owner.
+#[get("/api/days?:query", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
+pub async fn list(query: DayQuerySchema) -> ServerFnResult<Vec<DaySchema>> {
     let current_user = current_user_from_cookie(&cookie, &pool).await?;
+    let user_name = query.user_name.unwrap_or(current_user.name);
 
-    Ok(day::list(&current_user.name, &pool).await?)
-}
-
-/// Returns the given user's days; day history is public read data for every
-/// authenticated user, not just its owner.
-#[get("/api/days/community?user_name", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
-pub async fn list_for_user(user_name: String) -> ServerFnResult<Vec<DaySchema>> {
-    current_user_from_cookie(&cookie, &pool).await?;
-
-    Ok(day::list(&user_name, &pool).await?)
+    Ok(day::list(&user_name, query.filters, &pool).await?)
 }
 
 #[post("/api/days", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]

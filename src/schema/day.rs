@@ -31,9 +31,45 @@ pub struct CreateDaySchema {
     pub notes: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct FindDaysByUserSchema {
-    pub name: String,
+/// How a day's eaten calories compare to its calorie target.
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DayOutcome {
+    /// Eaten calories are at most the target.
+    Within,
+    Over,
+}
+
+impl DayOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Within => "within",
+            Self::Over => "over",
+        }
+    }
+}
+
+/// Query string filters for listing days, e.g.
+/// `?from=2026-09-01&to=2026-09-30&outcome=over&q=pasta`. Omitted fields don't filter.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct DayFiltersSchema {
+    /// Inclusive lower bound on the day's date.
+    pub from: Option<NaiveDate>,
+    /// Inclusive upper bound on the day's date.
+    pub to: Option<NaiveDate>,
+    pub outcome: Option<DayOutcome>,
+    /// Case-insensitive text that at least one of the day's entries must
+    /// contain in its name or notes.
+    pub q: Option<String>,
+}
+
+/// Query string for listing a user's days: whose, plus [`DayFiltersSchema`].
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct DayQuerySchema {
+    /// Defaults to the signed-in user.
+    pub user_name: Option<String>,
+    #[serde(flatten)]
+    pub filters: DayFiltersSchema,
 }
 
 #[derive(Deserialize)]

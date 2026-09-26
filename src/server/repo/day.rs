@@ -3,7 +3,7 @@ use sqlx::PgPool;
 
 use crate::{
     schema::day::{
-        DaySchema, DeleteDaySchema, FindDayByUserSchema, FindDaysByUserSchema,
+        DayFiltersSchema, DayOutcome, DaySchema, DeleteDaySchema, FindDayByUserSchema,
         UpdateDayNotesSchema, UpdateDayTargetCaloriesSchema, UpdateDayWeightSchema,
     },
     server::error::ServerError,
@@ -45,10 +45,16 @@ impl From<Day> for DaySchema {
 
 impl Day {
     pub async fn find_by_user(
-        value: &FindDaysByUserSchema,
+        name: &str,
+        filters: &DayFiltersSchema,
         pool: &PgPool,
     ) -> Result<Vec<Self>, ServerError> {
-        let FindDaysByUserSchema { name } = value;
+        let DayFiltersSchema {
+            from,
+            to,
+            outcome,
+            q,
+        } = filters;
 
         let days = sqlx::query_as!(
             Self,
@@ -56,8 +62,31 @@ impl Day {
              FROM days
              INNER JOIN users ON users.id = days.user_id
              WHERE users.name = $1
+               AND ($2::date IS NULL OR days.date >= $2)
+               AND ($3::date IS NULL OR days.date <= $3)
+               AND ($4::text IS NULL OR ($4 = 'over') = (
+                   COALESCE((
+                       SELECT SUM(entries.calories)
+                       FROM entries
+                       WHERE entries.user_id = days.user_id AND entries.date = days.date
+                   ), 0) > days.target_calories
+               ))
+               AND ($5::text IS NULL OR EXISTS (
+                   SELECT 1
+                   FROM entries
+                   WHERE entries.user_id = days.user_id
+                     AND entries.date = days.date
+                     AND strpos(
+                         lower(entries.name || ' ' || COALESCE(entries.notes, '')),
+                         lower($5)
+                     ) > 0
+               ))
              ORDER BY days.date DESC, days.id DESC",
             name,
+            *from,
+            *to,
+            outcome.map(DayOutcome::as_str),
+            q.as_deref(),
         )
         .fetch_all(pool)
         .await?;
@@ -68,7 +97,7 @@ impl Day {
     pub async fn find_one_by_user(
         value: &FindDayByUserSchema,
         pool: &PgPool,
-    ) -> Result<Self, ServerError> {
+    ) -> Result<Option<Self>, ServerError> {
         let FindDayByUserSchema { user_name, date } = value;
 
         let day = sqlx::query_as!(
@@ -80,7 +109,7 @@ impl Day {
             user_name,
             date,
         )
-        .fetch_one(pool)
+        .fetch_optional(pool)
         .await?;
 
         Ok(day)

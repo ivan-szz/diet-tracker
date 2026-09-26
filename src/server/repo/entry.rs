@@ -3,8 +3,8 @@ use sqlx::PgPool;
 
 use crate::{
     schema::entry::{
-        CreateEntrySchema, DeleteEntrySchema, EntrySchema, FindEntriesByUserSchema,
-        FindEntryByIdSchema, UpdateEntryNotesSchema,
+        CreateEntrySchema, DeleteEntrySchema, EntryFiltersSchema, EntrySchema, FindEntryByIdSchema,
+        UpdateEntryNotesSchema,
     },
     server::error::ServerError,
 };
@@ -37,10 +37,11 @@ impl From<Entry> for EntrySchema {
 
 impl Entry {
     pub async fn find_by_user(
-        value: &FindEntriesByUserSchema,
+        name: &str,
+        filters: &EntryFiltersSchema,
         pool: &PgPool,
     ) -> Result<Vec<Self>, ServerError> {
-        let FindEntriesByUserSchema { name } = value;
+        let EntryFiltersSchema { from, to, q } = filters;
 
         let entries = sqlx::query_as!(
             Self,
@@ -48,8 +49,17 @@ impl Entry {
              FROM entries
              INNER JOIN users ON users.id = entries.user_id
              WHERE users.name = $1
+               AND ($2::date IS NULL OR entries.date >= $2)
+               AND ($3::date IS NULL OR entries.date <= $3)
+               AND ($4::text IS NULL OR strpos(
+                   lower(entries.name || ' ' || COALESCE(entries.notes, '')),
+                   lower($4)
+               ) > 0)
              ORDER BY entries.date DESC, entries.id DESC",
             name,
+            *from,
+            *to,
+            q.as_deref(),
         )
         .fetch_all(pool)
         .await?;

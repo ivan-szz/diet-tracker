@@ -27,9 +27,25 @@ pub struct CreateEntrySchema {
     pub notes: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct FindEntriesByUserSchema {
-    pub name: String,
+/// Query string filters for listing entries, e.g.
+/// `?from=2026-09-01&to=2026-09-30&q=pasta`. Omitted fields don't filter.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct EntryFiltersSchema {
+    /// Inclusive lower bound on the entry's date.
+    pub from: Option<NaiveDate>,
+    /// Inclusive upper bound on the entry's date.
+    pub to: Option<NaiveDate>,
+    /// Case-insensitive text the entry's name or notes must contain.
+    pub q: Option<String>,
+}
+
+/// Query string for listing a user's entries: whose, plus [`EntryFiltersSchema`].
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
+pub struct EntryQuerySchema {
+    /// Defaults to the signed-in user.
+    pub user_name: Option<String>,
+    #[serde(flatten)]
+    pub filters: EntryFiltersSchema,
 }
 
 #[derive(Deserialize)]

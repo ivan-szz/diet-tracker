@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT days.*\n             FROM days\n             INNER JOIN users ON users.id = days.user_id\n             WHERE users.name = $1\n             ORDER BY days.date DESC, days.id DESC",
+  "query": "SELECT days.*\n             FROM days\n             INNER JOIN users ON users.id = days.user_id\n             WHERE users.name = $1\n               AND ($2::date IS NULL OR days.date >= $2)\n               AND ($3::date IS NULL OR days.date <= $3)\n               AND ($4::text IS NULL OR ($4 = 'over') = (\n                   COALESCE((\n                       SELECT SUM(entries.calories)\n                       FROM entries\n                       WHERE entries.user_id = days.user_id AND entries.date = days.date\n                   ), 0) > days.target_calories\n               ))\n               AND ($5::text IS NULL OR EXISTS (\n                   SELECT 1\n                   FROM entries\n                   WHERE entries.user_id = days.user_id\n                     AND entries.date = days.date\n                     AND strpos(\n                         lower(entries.name || ' ' || COALESCE(entries.notes, '')),\n                         lower($5)\n                     ) > 0\n               ))\n             ORDER BY days.date DESC, days.id DESC",
   "describe": {
     "columns": [
       {
@@ -94,6 +94,10 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Date",
+        "Date",
+        "Text",
         "Text"
       ]
     },
@@ -108,5 +112,5 @@
       false
     ]
   },
-  "hash": "8d45104154ebc303976646937f31a700325d2a5ba063b771032c2ebab17a0713"
+  "hash": "716bb23a2f5860a1cf6c961134f448139e33c31e6b8d17d6ae6813b3d0087901"
 }

@@ -13,6 +13,10 @@ pub enum ServerError {
     UserAlreadyExists,
     #[error("Target calories required")]
     MissingTargetCalories,
+    #[error("User not found")]
+    UserNotFound,
+    #[error("Invalid date range")]
+    InvalidDateRange,
     #[error(transparent)]
     Validation(#[from] validator::ValidationErrors),
     #[error(transparent)]
@@ -33,6 +37,12 @@ impl ServerError {
             ServerError::MissingTargetCalories => (
                 400,
                 "Specifica l'obiettivo calorico: non c'è un giorno precedente da cui ereditarlo",
+                None,
+            ),
+            ServerError::UserNotFound => (404, "Utente non trovato", None),
+            ServerError::InvalidDateRange => (
+                400,
+                "Intervallo di date non valido: `from` deve precedere `to` e coprire al massimo un anno",
                 None,
             ),
             ServerError::Jwt(_) => (401, "Sessione non valida", None),

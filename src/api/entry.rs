@@ -1,5 +1,5 @@
 use crate::schema::entry::{
-    CreateEntrySchema, DeleteEntrySchema, EntrySchema, UpdateEntryNotesSchema,
+    CreateEntrySchema, DeleteEntrySchema, EntryQuerySchema, EntrySchema, UpdateEntryNotesSchema,
 };
 use dioxus::prelude::*;
 #[cfg(feature = "server")]
@@ -18,20 +18,15 @@ use dioxus::server::axum::Extension;
 #[cfg(feature = "server")]
 use sqlx::PgPool;
 
-#[get("/api/entries", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
-pub async fn list() -> ServerFnResult<Vec<EntrySchema>> {
+/// Returns a user's entries, newest first, narrowed by the optional filters
+/// in [`EntryQuerySchema`]. Entry history is public read data for every
+/// authenticated user, not just its owner.
+#[get("/api/entries?:query", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
+pub async fn list(query: EntryQuerySchema) -> ServerFnResult<Vec<EntrySchema>> {
     let current_user = current_user_from_cookie(&cookie, &pool).await?;
+    let user_name = query.user_name.unwrap_or(current_user.name);
 
-    Ok(entry::list(&current_user.name, &pool).await?)
-}
-
-/// Returns the given user's entries; entry history is public read data for
-/// every authenticated user, not just its owner.
-#[get("/api/entries/community?user_name", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]
-pub async fn list_for_user(user_name: String) -> ServerFnResult<Vec<EntrySchema>> {
-    current_user_from_cookie(&cookie, &pool).await?;
-
-    Ok(entry::list(&user_name, &pool).await?)
+    Ok(entry::list(&user_name, query.filters, &pool).await?)
 }
 
 #[post("/api/entries", cookie: TypedHeader<Cookie>, pool: Extension<PgPool>)]

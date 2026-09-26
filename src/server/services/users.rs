@@ -8,6 +8,15 @@ pub async fn list(pool: &PgPool) -> Result<Vec<UserSchema>, ServerError> {
     Ok(users.into_iter().map(UserSchema::from).collect())
 }
 
+/// Fails with [`ServerError::UserNotFound`], so reads for a mistyped name
+/// aren't mistaken for a user with no data.
+pub async fn find(name: &str, pool: &PgPool) -> Result<UserSchema, ServerError> {
+    User::find_by_name(name, pool)
+        .await?
+        .map(UserSchema::from)
+        .ok_or(ServerError::UserNotFound)
+}
+
 pub async fn update_target_weight(
     payload: &UpdateUserTargetWeightSchema,
     pool: &PgPool,

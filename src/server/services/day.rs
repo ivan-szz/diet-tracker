@@ -1,19 +1,23 @@
 use crate::schema::day::{
-    CreateDaySchema, DaySchema, DeleteDaySchema, FindDaysByUserSchema, UpdateDayNotesSchema,
+    CreateDaySchema, DayFiltersSchema, DaySchema, DeleteDaySchema, UpdateDayNotesSchema,
     UpdateDayTargetCaloriesSchema, UpdateDayWeightSchema,
 };
 use crate::server::error::ServerError;
 use crate::server::repo::day::{CreateDay, Day};
+use crate::server::services::{non_blank, users};
 use sqlx::PgPool;
 
-pub async fn list(user_name: &str, pool: &PgPool) -> Result<Vec<DaySchema>, ServerError> {
-    let days = Day::find_by_user(
-        &FindDaysByUserSchema {
-            name: user_name.to_string(),
-        },
-        pool,
-    )
-    .await?;
+pub async fn list(
+    user_name: &str,
+    filters: DayFiltersSchema,
+    pool: &PgPool,
+) -> Result<Vec<DaySchema>, ServerError> {
+    users::find(user_name, pool).await?;
+    let filters = DayFiltersSchema {
+        q: non_blank(filters.q),
+        ..filters
+    };
+    let days = Day::find_by_user(user_name, &filters, pool).await?;
 
     Ok(days.into_iter().map(DaySchema::from).collect())
 }
