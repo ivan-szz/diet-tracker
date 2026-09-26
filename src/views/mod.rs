@@ -9,7 +9,7 @@
 //! a common wrapper around all child routes.
 
 mod home;
-pub use home::Home;
+pub use home::{Home, UserProfile};
 
 mod login;
 pub use login::Login;

@@ -5,8 +5,13 @@ use crate::schema::stats::TrendPointSchema;
 use dioxus::prelude::*;
 
 /// `points` must cover `MonthlyChart`'s date range, one per day, ascending.
+/// `owner_name` is `None` for the signed-in user's own trend.
 #[component]
-pub fn TrendCard(points: Vec<TrendPointSchema>) -> Element {
+pub fn TrendCard(points: Vec<TrendPointSchema>, owner_name: Option<String>) -> Element {
+    let kicker = match owner_name {
+        Some(name) => format!("L'ANDAMENTO DI {}", name.to_uppercase()),
+        None => "IL TUO ANDAMENTO".to_string(),
+    };
     let calories_series = points.iter().map(|point| point.calories as f64).collect();
     let target_calories_series = points
         .iter()
@@ -21,8 +26,7 @@ pub fn TrendCard(points: Vec<TrendPointSchema>) -> Element {
         Card {
             p {
                 class: "text-accent text-xs font-semibold",
-                // TODO: Seguirà l'utente selezionato, una volta che esisterà.
-                "IL TUO ANDAMENTO"
+                "{kicker}"
             }
             p {
                 class: "font-heading text-xl",

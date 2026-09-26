@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use views::{AuthLayout, Home, Login, ProvidersLayout, Register};
+use views::{AuthLayout, Home, Login, ProvidersLayout, Register, UserProfile};
 
 mod api;
 mod components;
@@ -16,6 +16,8 @@ enum Route {
     #[layout(ProvidersLayout)]
         #[route("/")]
         Home {},
+        #[route("/utenti/:user_name")]
+        UserProfile { user_name: String },
         #[layout(AuthLayout)]
             #[route("/login")]
             Login,

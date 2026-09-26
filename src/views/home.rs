@@ -3,8 +3,10 @@ use crate::components::home::{
 };
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::separator::Separator;
+use crate::Route;
 use chrono::Local;
 use dioxus::prelude::*;
+use dioxus_icons::lucide::ArrowLeft;
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
 
@@ -12,6 +14,24 @@ const PAGE_CLASS: &str = "p-8 pt-20 flex flex-col gap-7 max-w-5xl mx-auto";
 
 #[component]
 pub fn Home() -> Element {
+    rsx! {
+        HomePage { viewed_user_name: None }
+    }
+}
+
+/// Another user's progress, read-only. Keyed on the name so switching
+/// profiles starts from fresh data and default diary filters.
+#[component]
+pub fn UserProfile(user_name: String) -> Element {
+    rsx! {
+        HomePage { key: "{user_name}", viewed_user_name: Some(user_name.clone()) }
+    }
+}
+
+/// `viewed_user_name` is whose data the page shows; `None` means the
+/// signed-in user.
+#[component]
+fn HomePage(viewed_user_name: Option<String>) -> Element {
     let session = use_auth();
     let toast_api = use_toast();
     let navigator = use_navigator();
@@ -19,15 +39,17 @@ pub fn Home() -> Element {
 
     // Bumped after every write, so each section's data refetches.
     let mut revision = use_signal(|| 0u32);
+    let loaded_user_name = viewed_user_name.clone();
     let home_data_resource = use_resource(move || {
         revision();
         let is_signed_in = session.user.read().is_some();
+        let user_name = loaded_user_name.clone();
 
         async move {
             if is_signed_in {
-                load_home_data(today, toast_api).await
+                Some(load_home_data(user_name, today, toast_api).await)
             } else {
-                HomeData::default()
+                None
             }
         }
     });
@@ -50,15 +72,35 @@ pub fn Home() -> Element {
     };
 
     let home_data_state = home_data_resource.read();
-    let Some(HomeData {
-        summary: Some(summary),
+    let HomeData {
+        summary,
         community,
         trend,
-    }) = home_data_state.as_ref()
-    else {
-        return rsx! { div { class: PAGE_CLASS } };
+    } = match home_data_state.as_ref() {
+        Some(Some(Ok(home_data))) => home_data,
+        Some(Some(Err(message))) => {
+            return rsx! {
+                div {
+                    class: PAGE_CLASS,
+                    p {
+                        class: "font-heading text-3xl",
+                        "{message}"
+                    }
+                    Link {
+                        class: "inline-flex items-center gap-1 text-sm text-accent hover:underline",
+                        to: Route::Home {},
+                        ArrowLeft {
+                            size: "1em"
+                        }
+                        "Torna ai tuoi progressi"
+                    }
+                }
+            };
+        }
+        _ => return rsx! { div { class: PAGE_CLASS } },
     };
 
+    let is_me = summary.user.id == user.id;
     let weight = &summary.weight;
     let weight_goal = match (
         weight.starting_kg,
@@ -77,6 +119,7 @@ pub fn Home() -> Element {
             class: PAGE_CLASS,
             HomeHeader {
                 summary: summary.clone(),
+                is_me,
                 today,
                 on_change: refresh_home_data,
             }
@@ -86,15 +129,19 @@ pub fn Home() -> Element {
             CommunityCard {
                 members: community.clone(),
                 current_user_id: user.id,
+                viewed_user_id: summary.user.id,
             }
             if let Some((starting_kg, target_kg, percent, remaining_kg)) = weight_goal {
                 WeightGoalCard { starting_kg, target_kg, percent, remaining_kg }
             }
             TrendCard {
                 points: trend.clone(),
+                owner_name: (!is_me).then(|| summary.user.name.clone()),
             }
             FoodDiary {
-                user_name: user.name.clone(),
+                viewed_user_name: summary.user.name.clone(),
+                is_me,
+                current_user_name: user.name.clone(),
                 today,
                 total_days: summary.recorded_days,
                 revision,

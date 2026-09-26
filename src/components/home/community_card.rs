@@ -5,10 +5,18 @@ use crate::components::ui::accordion::{
 use crate::components::ui::card::Card;
 use crate::components::UserRow;
 use crate::schema::stats::UserSummarySchema;
+use crate::Route;
 use dioxus::prelude::*;
 
+/// Selecting a member opens their progress; selecting yourself goes back home.
 #[component]
-pub fn CommunityCard(members: Vec<UserSummarySchema>, current_user_id: i32) -> Element {
+pub fn CommunityCard(
+    members: Vec<UserSummarySchema>,
+    current_user_id: i32,
+    viewed_user_id: i32,
+) -> Element {
+    let navigator = use_navigator();
+
     rsx! {
         Card {
             Accordion {
@@ -44,7 +52,18 @@ pub fn CommunityCard(members: Vec<UserSummarySchema>, current_user_id: i32) -> E
                                 weight_delta: member.weight.delta_kg,
                                 calories: member.day.calories,
                                 target_calories: member.day.target_calories.unwrap_or(0),
-                                selected: member.user.id == current_user_id,
+                                selected: member.user.id == viewed_user_id,
+                                is_me: member.user.id == current_user_id,
+                                on_select: {
+                                    let route = if member.user.id == current_user_id {
+                                        Route::Home {}
+                                    } else {
+                                        Route::UserProfile { user_name: member.user.name.clone() }
+                                    };
+                                    move |_| {
+                                        navigator.push(route.clone());
+                                    }
+                                },
                             }
                         }
                     }

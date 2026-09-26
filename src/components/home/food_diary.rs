@@ -15,11 +15,14 @@ use dioxus::prelude::*;
 use dioxus_icons::lucide::Plus;
 use dioxus_primitives::toast::use_toast;
 
-/// `revision` changes whenever the page's data does, so the diary refetches
-/// alongside the rest of the page.
+/// Shows `viewed_user_name`'s diary; it can only be edited when `is_me`, and
+/// edits are made as `current_user_name`. `revision` changes whenever the
+/// page's data does, so the diary refetches alongside the rest of the page.
 #[component]
 pub fn FoodDiary(
-    user_name: String,
+    viewed_user_name: String,
+    is_me: bool,
+    current_user_name: String,
     today: NaiveDate,
     total_days: usize,
     revision: ReadSignal<u32>,
@@ -31,13 +34,15 @@ pub fn FoodDiary(
     let mut is_deleting_entry = use_signal(|| false);
     let filters = use_signal(DiaryFilters::default);
 
+    let diary_user_name = viewed_user_name.clone();
     let diary_resource = use_resource(move || {
         revision();
         let current = filters();
+        let user_name = diary_user_name.clone();
 
         async move {
             let query = DayQuerySchema {
-                user_name: None,
+                user_name: Some(user_name),
                 filters: current.day_filters(today),
             };
             or_toast(diary::list(query).await, toast_api)
@@ -51,8 +56,13 @@ pub fn FoodDiary(
     } else {
         format!("{} giorni registrati", total_days)
     };
+    let title = if is_me {
+        "Diario alimentare".to_string()
+    } else {
+        format!("Diario di {viewed_user_name}")
+    };
 
-    let delete_user_name = user_name.clone();
+    let delete_user_name = current_user_name.clone();
     let handle_delete_entry = move || {
         let user_name = delete_user_name.clone();
         async move {
@@ -80,24 +90,26 @@ pub fn FoodDiary(
             class: "flex flex-wrap justify-between items-center gap-3 mt-10",
             h2 {
                 class: "font-heading text-3xl",
-                "Diario alimentare"
+                "{title}"
             }
-            Button {
-                type: "button",
-                // On mobile it moves next to the diary search, which only
-                // exists once there are days to filter.
-                class: if total_days == 0 { "font-heading text-xl" } else { "font-heading text-xl max-md:hidden" },
-                onclick: move |_| is_new_entry_dialog_open.set(true),
-                Plus {
-                    size: "2em"
+            if is_me {
+                Button {
+                    type: "button",
+                    // On mobile it moves next to the diary search, which only
+                    // exists once there are days to filter.
+                    class: if total_days == 0 { "font-heading text-xl" } else { "font-heading text-xl max-md:hidden" },
+                    onclick: move |_| is_new_entry_dialog_open.set(true),
+                    Plus {
+                        size: "2em"
+                    }
+                    "Nuova voce"
                 }
-                "Nuova voce"
-            }
-            NewEntryDialog {
-                open: is_new_entry_dialog_open,
-                user_name,
-                today,
-                on_saved: on_change,
+                NewEntryDialog {
+                    open: is_new_entry_dialog_open,
+                    user_name: current_user_name,
+                    today,
+                    on_saved: on_change,
+                }
             }
         }
         Card {
@@ -110,7 +122,7 @@ pub fn FoodDiary(
                 DiaryFilterBar {
                     filters,
                     today,
-                    on_new_entry: move |_| is_new_entry_dialog_open.set(true),
+                    on_new_entry: is_me.then_some(EventHandler::new(move |_| is_new_entry_dialog_open.set(true))),
                 }
                 p {
                     class: "text-xs text-primary-light mb-3",
@@ -151,10 +163,10 @@ pub fn FoodDiary(
                                         name: entry.name.clone(),
                                         calories: entry.calories,
                                         notes: entry.notes.clone().unwrap_or_default(),
-                                        on_delete: {
+                                        on_delete: is_me.then(|| {
                                             let id = entry.id;
-                                            move |_| pending_delete_entry_id.set(Some(id))
-                                        },
+                                            EventHandler::new(move |_| pending_delete_entry_id.set(Some(id)))
+                                        }),
                                     }
                                 }
                             }

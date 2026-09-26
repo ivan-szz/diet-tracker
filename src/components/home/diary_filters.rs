@@ -64,7 +64,8 @@ impl DiaryFilters {
 pub fn DiaryFilterBar(
     filters: Signal<DiaryFilters>,
     today: NaiveDate,
-    on_new_entry: EventHandler,
+    /// Without it the mobile "new entry" button is hidden.
+    on_new_entry: Option<EventHandler>,
 ) -> Element {
     let mut is_date_dialog_open = use_signal(|| false);
     // The input updates on every keystroke, the diary query only once typing
@@ -164,15 +165,17 @@ pub fn DiaryFilterBar(
                         "Azzera"
                     }
                 }
-                Button {
-                    type: "button",
-                    class: "flex-none md:hidden",
-                    variant: ButtonVariant::Primary,
-                    size: ButtonSize::Icon,
-                    aria_label: "Nuova voce",
-                    onclick: move |_| on_new_entry.call(()),
-                    Plus {
-                        size: "1.25em"
+                if let Some(on_new_entry) = on_new_entry {
+                    Button {
+                        type: "button",
+                        class: "flex-none md:hidden",
+                        variant: ButtonVariant::Primary,
+                        size: ButtonSize::Icon,
+                        aria_label: "Nuova voce",
+                        onclick: move |_| on_new_entry.call(()),
+                        Plus {
+                            size: "1.25em"
+                        }
                     }
                 }
             }

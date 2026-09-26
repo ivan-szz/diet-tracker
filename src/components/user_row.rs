@@ -21,8 +21,15 @@ pub struct UserRowProps {
     #[props(default = 0)]
     target_calories: i32,
 
+    /// Whether this is the user whose progress the page shows.
     #[props(default = false)]
     selected: bool,
+
+    /// Whether this is the signed-in user, labelled "Tu".
+    #[props(default = false)]
+    is_me: bool,
+
+    on_select: EventHandler,
 }
 
 #[component]
@@ -48,7 +55,15 @@ pub fn UserRow(props: UserRowProps) -> Element {
         div {
             role: "button",
             tabindex: 0,
+            aria_pressed: props.selected,
             "data-selected": props.selected,
+            onclick: move |_| props.on_select.call(()),
+            onkeydown: move |e: KeyboardEvent| {
+                if matches!(e.key(), Key::Enter) || e.key() == Key::Character(" ".to_string()) {
+                    e.prevent_default();
+                    props.on_select.call(());
+                }
+            },
             class: "w-full flex justify-between items-center my-3 cursor-pointer rounded-3xl border border-transparent py-3 pl-5 md:pl-10 pr-5 transition-colors data-[selected=true]:border-accent/50 data-[selected=true]:bg-white/50",
             div {
                 class: "flex items-center gap-2 md:gap-3",
@@ -65,8 +80,7 @@ pub fn UserRow(props: UserRowProps) -> Element {
                 div {
                     p {
                         class: "font-semibold mb-1",
-                        // TODO: Questo è un test per il rendering condizionale, andrà sostituito con un check sull'id dell'utente autenticato
-                        if props.selected { "Tu" } else  { "{props.name}" }
+                        if props.is_me { "Tu" } else { "{props.name}" }
                     }
                     p {
                         class: "text-xs text-primary-light",

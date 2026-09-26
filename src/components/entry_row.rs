@@ -14,7 +14,9 @@ pub struct EntryRowProps {
     #[props(default)]
     pub notes: String,
 
-    pub on_delete: EventHandler<()>,
+    /// Without it the entry is read-only and shows no delete button.
+    #[props(default)]
+    pub on_delete: Option<EventHandler<()>>,
 }
 
 #[component]
@@ -36,12 +38,14 @@ pub fn EntryRow(props: EntryRowProps) -> Element {
                         class: "font-semibold",
                         "{props.calories}"
                     }
-                    Button {
-                        type: "button",
-                        variant: ButtonVariant::Ghost,
-                        onclick: move |_| props.on_delete.call(()),
-                        X {
-                            size: "1.25em"
+                    if let Some(on_delete) = props.on_delete {
+                        Button {
+                            type: "button",
+                            variant: ButtonVariant::Ghost,
+                            onclick: move |_| on_delete.call(()),
+                            X {
+                                size: "1.25em"
+                            }
                         }
                     }
                 }

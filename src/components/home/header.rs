@@ -6,15 +6,19 @@ use crate::components::ui::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::ui::card::Card;
 use crate::components::ui::separator::Separator;
 use crate::schema::stats::UserSummarySchema;
+use crate::Route;
 use chrono::{Datelike, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{LogOut, Pencil};
+use dioxus_icons::lucide::{ArrowLeft, LogOut, Pencil};
 use dioxus_primitives::toast::{use_toast, ToastOptions};
 use std::time::Duration;
 
+/// `is_me` is whether `summary` belongs to the signed-in user; anyone else's
+/// header is read-only.
 #[component]
 pub fn HomeHeader(
     summary: UserSummarySchema,
+    is_me: bool,
     today: NaiveDate,
     on_change: EventHandler,
 ) -> Element {
@@ -76,17 +80,29 @@ pub fn HomeHeader(
                             class: "font-heading text-4xl md:text-5xl",
                             "{user.name}"
                         }
-                        Button {
-                            type: "button",
-                            class: "mb-1",
-                            variant: ButtonVariant::Primary,
-                            onclick: move |_| handle_logout(),
-                            LogOut {}
+                        if is_me {
+                            Button {
+                                type: "button",
+                                class: "mb-1",
+                                variant: ButtonVariant::Primary,
+                                onclick: move |_| handle_logout(),
+                                LogOut {}
+                            }
                         }
                     }
                     p {
                         class: "text-primary-light",
                         "Ultimi 30 giorni di monitoraggio"
+                    }
+                    if !is_me {
+                        Link {
+                            class: "inline-flex items-center gap-1 mt-2 text-sm text-accent hover:underline",
+                            to: Route::Home {},
+                            ArrowLeft {
+                                size: "1em"
+                            }
+                            "Torna ai tuoi progressi"
+                        }
                     }
                 }
                 div {
@@ -110,15 +126,17 @@ pub fn HomeHeader(
                             div {
                                 Stat { value: calories_value.clone(), caption: calories_caption.clone() }
                             }
-                            div {
-                                class: "flex items-center justify-end",
-                                Button {
-                                    type: "button",
-                                    variant: ButtonVariant::Outline,
-                                    size: ButtonSize::Sm,
-                                    onclick: move |_| is_target_calories_dialog_open.set(true),
-                                    Pencil {}
-                                    "Obiettivo"
+                            if is_me {
+                                div {
+                                    class: "flex items-center justify-end",
+                                    Button {
+                                        type: "button",
+                                        variant: ButtonVariant::Outline,
+                                        size: ButtonSize::Sm,
+                                        onclick: move |_| is_target_calories_dialog_open.set(true),
+                                        Pencil {}
+                                        "Obiettivo"
+                                    }
                                 }
                             }
                         }
@@ -134,11 +152,17 @@ pub fn HomeHeader(
                             horizontal: false
                         }
                     }
-                    div {
-                        class: "cursor-pointer",
-                        role: "button",
-                        onclick: move |_| is_target_calories_dialog_open.set(true),
-                        Stat { value: calories_value, caption: calories_caption }
+                    if is_me {
+                        div {
+                            class: "cursor-pointer",
+                            role: "button",
+                            onclick: move |_| is_target_calories_dialog_open.set(true),
+                            Stat { value: calories_value, caption: calories_caption }
+                        }
+                    } else {
+                        div {
+                            Stat { value: calories_value, caption: calories_caption }
+                        }
                     }
                     div {
                         Separator {
@@ -149,13 +173,15 @@ pub fn HomeHeader(
                         Stat { value: streak_value, caption: streak_caption }
                     }
                 }
-                TargetCaloriesDialog {
-                    open: is_target_calories_dialog_open,
-                    user_name: user.name.clone(),
-                    today,
-                    today_has_day: day.has_day,
-                    current_target: day.target_calories,
-                    on_saved: on_change,
+                if is_me {
+                    TargetCaloriesDialog {
+                        open: is_target_calories_dialog_open,
+                        user_name: user.name.clone(),
+                        today,
+                        today_has_day: day.has_day,
+                        current_target: day.target_calories,
+                        on_saved: on_change,
+                    }
                 }
             }
         }
