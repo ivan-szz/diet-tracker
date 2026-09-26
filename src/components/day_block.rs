@@ -35,7 +35,7 @@ pub fn DayBlock(props: DayBlockProps) -> Element {
         div {
             class: "flex flex-col gap-2 mb-12",
             div {
-                class: "flex items-center justify-between",
+                class: "flex flex-wrap items-center justify-between gap-2",
                 p {
                     class: "font-heading text-xl",
                     "{prefix}{props.date.day()} {Month::from_zero_based(props.date.month0()).short_name()}"

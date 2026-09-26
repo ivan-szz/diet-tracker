@@ -1,6 +1,24 @@
 use dioxus::prelude::*;
+
+#[derive(Copy, Clone, PartialEq, Default)]
+pub enum InputVariant {
+    #[default]
+    Filled,
+    Outline,
+}
+
+impl InputVariant {
+    fn classes(&self) -> &'static str {
+        match self {
+            InputVariant::Filled => "border-accent/20 bg-accent/10 px-3 py-2 placeholder:text-black/70 hover:not-disabled:bg-accent/20 focus-visible:bg-accent/20",
+            InputVariant::Outline => "min-h-9 border-primary/15 bg-transparent px-3.5 py-1.5 text-sm placeholder:text-primary/55 hover:not-disabled:border-primary/45 focus-visible:border-accent",
+        }
+    }
+}
+
 #[component]
 pub fn Input(
+    #[props(default)] variant: InputVariant,
     oninput: Option<EventHandler<FormEvent>>,
     onchange: Option<EventHandler<FormEvent>>,
     oninvalid: Option<EventHandler<FormEvent>>,
@@ -27,7 +45,7 @@ pub fn Input(
 ) -> Element {
     rsx! {
         input {
-            class: "w-full relative flex flex-row items-center justify-between gap-1 border-1 border-accent/20 rounded-full bg-accent/10 px-3 py-2 transition-colors duration-100 placeholder:text-black/70 hover:not-disabled:bg-accent/20 focus-visible:bg-accent/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-black/70",
+            class: "w-full relative flex flex-row items-center justify-between gap-1 border-1 rounded-full transition-colors duration-100 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-black/70 {variant.classes()}",
             oninput: move |e| _ = oninput.map(|callback| callback(e)),
             onchange: move |e| _ = onchange.map(|callback| callback(e)),
             oninvalid: move |e| _ = oninvalid.map(|callback| callback(e)),

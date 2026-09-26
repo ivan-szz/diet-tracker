@@ -10,6 +10,7 @@ pub mod dialog;
 pub mod input;
 pub mod label;
 pub mod progress;
+pub mod segmented;
 pub mod separator;
 pub mod switch;
 pub mod toast;

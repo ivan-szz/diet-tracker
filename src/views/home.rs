@@ -1,6 +1,5 @@
 use crate::components::home::{
-    first_weight, latest_weight, load_home_data, CommunityCard, FoodDiary, HomeData, HomeHeader,
-    TrendCard, WeightGoalCard,
+    load_home_data, CommunityCard, FoodDiary, HomeData, HomeHeader, TrendCard, WeightGoalCard,
 };
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::separator::Separator;
@@ -18,17 +17,21 @@ pub fn Home() -> Element {
     let navigator = use_navigator();
     let today = Local::now().date_naive();
 
-    let mut home_data_resource = use_resource(move || {
-        let current_user_id = session.user.read().as_ref().map(|user| user.id);
+    // Bumped after every write, so each section's data refetches.
+    let mut revision = use_signal(|| 0u32);
+    let home_data_resource = use_resource(move || {
+        revision();
+        let is_signed_in = session.user.read().is_some();
 
         async move {
-            match current_user_id {
-                Some(current_user_id) => load_home_data(current_user_id, today, toast_api).await,
-                None => HomeData::default(),
+            if is_signed_in {
+                load_home_data(today, toast_api).await
+            } else {
+                HomeData::default()
             }
         }
     });
-    let refresh_home_data = use_callback(move |_| home_data_resource.restart());
+    let refresh_home_data = use_callback(move |_| *revision.write() += 1);
 
     if *session.is_loading.read() {
         return rsx! { div { class: PAGE_CLASS } };
@@ -47,17 +50,24 @@ pub fn Home() -> Element {
     };
 
     let home_data_state = home_data_resource.read();
-    let Some(home_data) = home_data_state.as_ref() else {
+    let Some(HomeData {
+        summary: Some(summary),
+        community,
+        trend,
+    }) = home_data_state.as_ref()
+    else {
         return rsx! { div { class: PAGE_CLASS } };
     };
 
+    let weight = &summary.weight;
     let weight_goal = match (
-        first_weight(&home_data.days),
-        latest_weight(&home_data.days),
-        user.target_weight_kg,
+        weight.starting_kg,
+        weight.target_kg,
+        weight.goal_progress_percent,
+        weight.remaining_kg,
     ) {
-        (Some((starting_kg, _)), Some(current_kg), Some(target_kg)) => {
-            Some((starting_kg, current_kg, target_kg))
+        (Some(starting_kg), Some(target_kg), Some(percent), Some(remaining_kg)) => {
+            Some((starting_kg, target_kg, percent, remaining_kg))
         }
         _ => None,
     };
@@ -66,9 +76,7 @@ pub fn Home() -> Element {
         div {
             class: PAGE_CLASS,
             HomeHeader {
-                user: user.clone(),
-                days: home_data.days.clone(),
-                entries: home_data.entries.clone(),
+                summary: summary.clone(),
                 today,
                 on_change: refresh_home_data,
             }
@@ -76,22 +84,20 @@ pub fn Home() -> Element {
                 class: "opacity-20"
             }
             CommunityCard {
-                members: home_data.community.clone(),
+                members: community.clone(),
                 current_user_id: user.id,
             }
-            if let Some((starting_kg, current_kg, target_kg)) = weight_goal {
-                WeightGoalCard { starting_kg, current_kg, target_kg }
+            if let Some((starting_kg, target_kg, percent, remaining_kg)) = weight_goal {
+                WeightGoalCard { starting_kg, target_kg, percent, remaining_kg }
             }
             TrendCard {
-                days: home_data.days.clone(),
-                entries: home_data.entries.clone(),
-                today,
+                points: trend.clone(),
             }
             FoodDiary {
                 user_name: user.name.clone(),
                 today,
-                days: home_data.days.clone(),
-                entries: home_data.entries.clone(),
+                total_days: summary.recorded_days,
+                revision,
                 on_change: refresh_home_data,
             }
         }

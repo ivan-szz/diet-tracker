@@ -1,13 +1,14 @@
-use super::data::CommunityMember;
+use super::dates::month_name;
 use crate::components::ui::accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 };
 use crate::components::ui::card::Card;
 use crate::components::UserRow;
+use crate::schema::stats::UserSummarySchema;
 use dioxus::prelude::*;
 
 #[component]
-pub fn CommunityCard(members: Vec<CommunityMember>, current_user_id: i32) -> Element {
+pub fn CommunityCard(members: Vec<UserSummarySchema>, current_user_id: i32) -> Element {
     rsx! {
         Card {
             Accordion {
@@ -39,10 +40,10 @@ pub fn CommunityCard(members: Vec<CommunityMember>, current_user_id: i32) -> Ele
                                 index: index as i32 + 1,
                                 name: member.user.name.clone(),
                                 streak: member.user.streak,
-                                month: member.starting_month.clone().unwrap_or_default(),
-                                weight_delta: member.weight_delta,
-                                calories: member.calories,
-                                target_calories: member.target_calories,
+                                month: member.weight.starting_date.map(month_name).unwrap_or_default().to_string(),
+                                weight_delta: member.weight.delta_kg,
+                                calories: member.day.calories,
+                                target_calories: member.day.target_calories.unwrap_or(0),
                                 selected: member.user.id == current_user_id,
                             }
                         }

@@ -1,32 +1,56 @@
-use super::feedback::{toast_error, toast_success};
+use super::diary_filters::{DiaryFilterBar, DiaryFilters};
+use super::feedback::{or_toast, toast_error, toast_success};
 use super::new_entry_dialog::NewEntryDialog;
-use super::stats::calories_on;
-use crate::api::entry;
+use crate::api::{diary, entry};
 use crate::components::ui::button::Button;
 use crate::components::ui::card::Card;
 use crate::components::ui::confirm_dialog::ConfirmDialog;
 use crate::components::ui::separator::Separator;
 use crate::components::{DayBlock, EntryRow};
+use crate::schema::day::DayQuerySchema;
 use crate::schema::entry::DeleteEntrySchema;
-use crate::schema::{day::DaySchema, entry::EntrySchema};
 use crate::utils::error::error_message;
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::Plus;
 use dioxus_primitives::toast::use_toast;
 
+/// `revision` changes whenever the page's data does, so the diary refetches
+/// alongside the rest of the page.
 #[component]
 pub fn FoodDiary(
     user_name: String,
     today: NaiveDate,
-    days: Vec<DaySchema>,
-    entries: Vec<EntrySchema>,
+    total_days: usize,
+    revision: ReadSignal<u32>,
     on_change: EventHandler,
 ) -> Element {
     let toast_api = use_toast();
     let mut is_new_entry_dialog_open = use_signal(|| false);
     let mut pending_delete_entry_id = use_signal(|| None::<i32>);
     let mut is_deleting_entry = use_signal(|| false);
+    let filters = use_signal(DiaryFilters::default);
+
+    let diary_resource = use_resource(move || {
+        revision();
+        let current = filters();
+
+        async move {
+            let query = DayQuerySchema {
+                user_name: None,
+                filters: current.day_filters(today),
+            };
+            or_toast(diary::list(query).await, toast_api)
+        }
+    });
+
+    let diary_state = diary_resource.read();
+    let visible_days = diary_state.as_deref().unwrap_or_default();
+    let count_label = if filters.read().is_active() {
+        format!("{} di {} giorni", visible_days.len(), total_days)
+    } else {
+        format!("{} giorni registrati", total_days)
+    };
 
     let delete_user_name = user_name.clone();
     let handle_delete_entry = move || {
@@ -53,14 +77,16 @@ pub fn FoodDiary(
 
     rsx! {
         div {
-            class: "flex justify-between items-center mt-10",
+            class: "flex flex-wrap justify-between items-center gap-3 mt-10",
             h2 {
                 class: "font-heading text-3xl",
                 "Diario alimentare"
             }
             Button {
                 type: "button",
-                class: "font-heading text-xl",
+                // On mobile it moves next to the diary search, which only
+                // exists once there are days to filter.
+                class: if total_days == 0 { "font-heading text-xl" } else { "font-heading text-xl max-md:hidden" },
                 onclick: move |_| is_new_entry_dialog_open.set(true),
                 Plus {
                     size: "2em"
@@ -75,29 +101,51 @@ pub fn FoodDiary(
             }
         }
         Card {
-            if days.is_empty() {
+            if total_days == 0 {
                 p {
                     class: "text-sm text-primary-light",
                     "Nessun giorno registrato."
                 }
             } else {
+                DiaryFilterBar {
+                    filters,
+                    today,
+                    on_new_entry: move |_| is_new_entry_dialog_open.set(true),
+                }
+                p {
+                    class: "text-xs text-primary-light mb-3",
+                    "{count_label}"
+                }
+                if diary_state.is_some() && visible_days.is_empty() {
+                    div {
+                        class: "py-6 text-center",
+                        p {
+                            class: "font-heading text-lg mb-1.5",
+                            "Nessun giorno corrisponde"
+                        }
+                        p {
+                            class: "text-sm text-primary-light",
+                            "Prova ad allargare il periodo o a cambiare la ricerca."
+                        }
+                    }
+                }
                 div {
                     class: "space-y-4",
-                    for (index, day) in days.iter().enumerate() {
+                    for (index, diary_day) in visible_days.iter().enumerate() {
                         Fragment {
-                            key: "{day.id}",
+                            key: "{diary_day.day.id}",
                             if index > 0 {
                                 Separator {
                                     class: "opacity-20"
                                 }
                             }
                             DayBlock {
-                                date: day.date,
-                                weight_kg: day.weight_kg,
-                                ingested_calories: calories_on(day.date, &entries),
-                                target_calories: day.target_calories,
-                                notes: day.notes.clone(),
-                                for entry in entries.iter().filter(|entry| entry.date == day.date) {
+                                date: diary_day.day.date,
+                                weight_kg: diary_day.day.weight_kg,
+                                ingested_calories: diary_day.calories,
+                                target_calories: diary_day.day.target_calories,
+                                notes: diary_day.day.notes.clone(),
+                                for entry in diary_day.entries.iter() {
                                     EntryRow {
                                         key: "{entry.id}",
                                         name: entry.name.clone(),

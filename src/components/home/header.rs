@@ -1,12 +1,11 @@
-use super::stats::{calories_on, first_weight, latest_weight, target_calories_as_of};
+use super::dates::month_name;
 use super::target_calories_dialog::TargetCaloriesDialog;
 use crate::api::auth::logout;
 use crate::components::providers::auth::use_auth;
 use crate::components::ui::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::ui::card::Card;
 use crate::components::ui::separator::Separator;
-use crate::schema::{day::DaySchema, entry::EntrySchema, user::UserSchema};
-use crate::utils::constants::Month;
+use crate::schema::stats::UserSummarySchema;
 use chrono::{Datelike, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{LogOut, Pencil};
@@ -15,12 +14,13 @@ use std::time::Duration;
 
 #[component]
 pub fn HomeHeader(
-    user: UserSchema,
-    days: Vec<DaySchema>,
-    entries: Vec<EntrySchema>,
+    summary: UserSummarySchema,
     today: NaiveDate,
     on_change: EventHandler,
 ) -> Element {
+    let UserSummarySchema {
+        user, day, weight, ..
+    } = summary;
     let session = use_auth();
     let toast_api = use_toast();
     let navigator = use_navigator();
@@ -38,27 +38,22 @@ pub fn HomeHeader(
         navigator.push("/login");
     };
 
-    let month = Month::from_zero_based(today.month0());
+    let current_month = month_name(today);
     let year = today.year();
 
-    let today_target_calories = target_calories_as_of(today, &days);
     let calories_value = format!(
         "{} / {}",
-        calories_on(today, &entries),
-        today_target_calories
+        day.calories,
+        day.target_calories
             .map(|value| value.to_string())
             .unwrap_or_else(|| "–".to_string())
     );
     let calories_caption = "kcal oggi / obiettivo".to_string();
 
-    let (weight_value, weight_caption) = match (latest_weight(&days), first_weight(&days)) {
-        (Some(current_kg), Some((starting_kg, starting_date))) => (
+    let (weight_value, weight_caption) = match (weight.current_kg, weight.starting_date) {
+        (Some(current_kg), Some(starting_date)) => (
             format!("{current_kg:.1} kg"),
-            format!(
-                "{:.1} kg da {}",
-                current_kg - starting_kg,
-                Month::from_zero_based(starting_date.month0()).full_name()
-            ),
+            format!("{:.1} kg da {}", weight.delta_kg, month_name(starting_date)),
         ),
         _ => ("—".to_string(), "Nessun peso registrato".to_string()),
     };
@@ -70,7 +65,7 @@ pub fn HomeHeader(
         div {
             p {
                 class: "text-accent text-xs font-semibold mb-2",
-                "DIARIO ALIMENTARE · {month.full_name()} {year}"
+                "DIARIO ALIMENTARE · {current_month} {year}"
             }
             div {
                 class: "flex flex-col gap-6 md:flex-row md:justify-between md:items-end",
@@ -158,8 +153,8 @@ pub fn HomeHeader(
                     open: is_target_calories_dialog_open,
                     user_name: user.name.clone(),
                     today,
-                    today_has_day: days.iter().any(|day| day.date == today),
-                    current_target: today_target_calories,
+                    today_has_day: day.has_day,
+                    current_target: day.target_calories,
                     on_saved: on_change,
                 }
             }

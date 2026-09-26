@@ -1,16 +1,21 @@
-use super::stats::{trailing_month_dates, trailing_trend};
 use crate::components::monthly_chart::MonthlyChart;
 use crate::components::ui::card::Card;
 use crate::components::ui::chart::ChartSeries;
-use crate::schema::{day::DaySchema, entry::EntrySchema};
-use chrono::NaiveDate;
+use crate::schema::stats::TrendPointSchema;
 use dioxus::prelude::*;
 
+/// `points` must cover `MonthlyChart`'s date range, one per day, ascending.
 #[component]
-pub fn TrendCard(days: Vec<DaySchema>, entries: Vec<EntrySchema>, today: NaiveDate) -> Element {
-    let chart_dates = trailing_month_dates(today);
-    let (calories_series, target_calories_series, weight_series) =
-        trailing_trend(&chart_dates, &days, &entries);
+pub fn TrendCard(points: Vec<TrendPointSchema>) -> Element {
+    let calories_series = points.iter().map(|point| point.calories as f64).collect();
+    let target_calories_series = points
+        .iter()
+        .map(|point| point.target_calories.unwrap_or(0) as f64)
+        .collect();
+    let weight_series = points
+        .iter()
+        .map(|point| point.weight_kg.unwrap_or(0.0) as f64)
+        .collect();
 
     rsx! {
         Card {

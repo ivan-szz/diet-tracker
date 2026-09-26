@@ -4,10 +4,12 @@ use dioxus::prelude::*;
 use dioxus_icons::lucide::ArrowRight;
 
 #[component]
-pub fn WeightGoalCard(starting_kg: f32, current_kg: f32, target_kg: f32) -> Element {
-    let percent: f64 =
-        100.0 - (100.0 / ((starting_kg - target_kg).abs() / (current_kg - target_kg).abs())) as f64;
-
+pub fn WeightGoalCard(
+    starting_kg: f32,
+    target_kg: f32,
+    percent: f64,
+    remaining_kg: f32,
+) -> Element {
     rsx! {
         Card {
             p {
@@ -59,7 +61,7 @@ pub fn WeightGoalCard(starting_kg: f32, current_kg: f32, target_kg: f32) -> Elem
             }
             p {
                 class: "text-sm text-primary-light",
-                "Mancano {(current_kg - target_kg).abs():.1} kg all'obiettivo"
+                "Mancano {remaining_kg:.1} kg all'obiettivo"
             }
         }
     }
