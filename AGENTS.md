@@ -266,3 +266,4 @@ The initial UI rendered by the component on the client must be identical to the 
 
 ## Workflow
 - IMPORTANT: Navigate, read, and edit files with the dedicated tools (Read, Edit, Write, Glob, Grep) — not shell commands like `cat`, `sed`, `grep`, or heredocs. Use the terminal only when it is genuinely the better fit (running `dx`/`cargo`/`git`, or bulk file operations).
+- IMPORTANT: The README's "For agents" section is the API's documentation for the agents that integrate with this app. Whenever you change the API in `src/api/` or the schemas it exposes (endpoints, parameters, payloads, responses, error codes, auth), update the README in the same change so it stays accurate.
