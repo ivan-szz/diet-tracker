@@ -11,6 +11,7 @@ pub use entry_row::EntryRow;
 mod day_block;
 pub use day_block::DayBlock;
 
+pub mod home;
 pub mod monthly_chart;
 pub mod providers;
 pub mod ui;
